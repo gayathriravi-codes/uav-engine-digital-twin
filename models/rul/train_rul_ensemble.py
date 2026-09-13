@@ -32,15 +32,12 @@ History:
       Its INPUT now needs the 10-column featurized window, not the raw
       7-column one -- use build_inference_window() below to convert.
     - Step B (this edit): predict_rul_ensemble() takes a new `calibrated`
-      kwarg (default False). When True, applies the per-bucket bias
+      kwarg (default True). When True, applies the per-bucket bias
       correction + conformal lower bound from calibrate_rul.py before
       returning. Return dict KEYS are unchanged either way -- teammates
-      calling predict_rul_ensemble() with no calibrated= arg get identical
-      behavior to before this edit. Default stays False until per-bucket
-      coverage is verified on the test set (see
-      calibrate_rul.check_per_bucket_coverage) -- only flip the default to
-      True after every bucket passes.
-        - Step B verified: per-bucket coverage on TEST >= 90% for all buckets
+      calling predict_rul_ensemble() with no calibrated= arg get the
+      bias-corrected behavior automatically.
+    - Step B verified: per-bucket coverage on TEST >= 90% for all buckets
       after merging (100,150)/(150,200) into (100,200) and one iteration
       of refit (bucket-by-corrected-estimate, not raw estimate). calibrated
       default flipped to True. KNOWN CAVEAT: (250,350) bucket got 0
@@ -308,10 +305,10 @@ def predict_rul_ensemble(window, models, scaler, dropped_idx_list, calibrated=Tr
         conformal lower bound (see calibrate_rul.py) before returning.
         Return dict KEYS are unchanged either way -- point_estimate_minutes
         and rul_lower_bound_minutes are just corrected values when True.
-        Defaults to False so existing callers (dashboard, what-if engine)
-        get identical behavior to before this arg existed. Only flip the
-        default to True after calibrate_rul.check_per_bucket_coverage
-        passes for every bucket on the test set.
+        Defaults to True (Step B calibration verified, see changelog above).
+        Existing callers passing no calibrated= arg now get the bias-corrected
+        estimate automatically. Pass calibrated=False explicitly to get the
+        pre-calibration raw ensemble output instead.
 
     Returns dict:
       point_estimate_minutes -- mean across variants (or bias-corrected, if calibrated=True)
@@ -454,7 +451,7 @@ if __name__ == "__main__":
     print("  from calibrate_rul import load_calibration_params, check_per_bucket_coverage")
     print("  params = load_calibration_params()")
     print("  check_per_bucket_coverage(X_test_scaled, y_test, models, scaler, dropped_idx_list, params)")
-    print("Only flip predict_rul_ensemble's calibrated= default to True after every bucket passes.")
+    print("calibrated= now defaults to True (Step B verified, see changelog). Pass calibrated=False explicitly if you need the pre-calibration raw ensemble output.")
 
     print("\nTeammates: if you have a raw 7-sensor window, call")
     print("build_inference_window(raw_window) first, then pass the result to")
