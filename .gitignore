@@ -41,3 +41,9 @@ Thumbs.db
 
 # Temporary files
 *.tmp
+# Recovery-phase dataset (regenerate locally, same as data/raw/)
+data/raw_recovery/*.csv
+!data/raw_recovery/.gitkeep
+
+# Debug/inspection scratch files
+_*.txt

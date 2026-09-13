@@ -19,8 +19,10 @@ This guarantees lb <= corrected_pred always. Acceptance test is per-bucket
 coverage (fraction of windows where y_true >= lb) on the TEST set, not an
 overall average -- see check_per_bucket_coverage().
 
-Buckets match diagnose_underestimation.py exactly:
-    [(0,50), (50,100), (100,150), (150,200), (200,250), (250,350)]
+Buckets (current, after merging (250,350) into (200,250) on 2026-09-13 --
+confirmed via check_bucket_frequency.py that (250,350) never gets
+populated by any real or what-if-generated window, 0/29,268 + 0/120):
+    [(0,50), (50,100), (100,200), (200,350)]
 
 Usage from train_rul_ensemble.py's predict_rul_ensemble(calibrated=True):
     from calibrate_rul import apply_calibration, load_calibration_params
@@ -34,7 +36,7 @@ import joblib
 
 from train_rul import MODEL_OUT_DIR
 
-BUCKET_EDGES = [(0, 50), (50, 100), (100, 200), (200, 250), (250, 350)]
+BUCKET_EDGES = [(0, 50), (50, 100), (100, 200), (200, 350)]
 CONFORMAL_QUANTILE = 0.9
 CALIBRATION_PATH = os.path.join(MODEL_OUT_DIR, "rul_calibration.joblib")
 
