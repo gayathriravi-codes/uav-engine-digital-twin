@@ -1,11 +1,12 @@
 """
-fault_injectors.py — Aashita's three fault types (swapped from Ashmitha):
-misfire, overheat, cooling_degradation.
+fault_injectors.py -- all six fault types across the team (roles swapped):
+misfire, overheat, cooling_degradation (Aashita);
+oil_issue, sensor_drift, vibration_fault (Ashmitha).
 
 Each injector takes a healthy flight DataFrame, picks a random onset point,
 perturbs sensors after onset to simulate the fault developing, and returns
-(faulted_df, true_rul_series) where true_rul_series[i] = timesteps remaining
-until "failure" as measured from row i (ground truth, since WE inject it).
+a faulted DataFrame with ground-truth RUL columns attached (since the fault
+onset/failure point is known by construction).
 
 Run directly to sanity-check + plot: python simulator/fault_injectors.py
 """
@@ -15,6 +16,7 @@ import sys
 import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from schema import HEALTHY_RANGES
 from simulate_healthy import simulate_healthy_flight
 
@@ -129,10 +131,110 @@ def inject_cooling_degradation(df, onset_frac=None, severity=1.0, seed=None):
     return df
 
 
+def inject_oil_issue(df, onset_frac=None, severity=1.0, seed=None):
+    """
+    Oil issue: gradual oil pressure drop combined with a slower oil temp rise,
+    representing a developing lubrication problem (seal wear, oil breakdown,
+    or a slow leak). Other sensors stay normal -- this is a lubrication-side
+    fault, not a combustion-side one.
+    """
+    rng = np.random.default_rng(seed)
+    df = df.copy()
+    n = len(df)
+    onset_idx = int(n * (onset_frac if onset_frac else rng.uniform(0.3, 0.6)))
+    failure_idx = n - 1
+
+    df["fault_type"] = "none"
+    ramp_len = failure_idx - onset_idx
+    pressure_end_drop = rng.uniform(15, 30) * severity
+    temp_end_rise = rng.uniform(20, 40) * severity
+    for i in range(onset_idx, n):
+        linear_progress = (i - onset_idx) / max(1, ramp_len)
+        progress = _degradation_curve(linear_progress)
+        df.loc[i, "oil_pressure"] -= pressure_end_drop * progress + rng.normal(0, 0.5)
+        df.loc[i, "oil_temp"] += temp_end_rise * progress + rng.normal(0, 1.0)
+        df.loc[i, "fault_type"] = "oil_issue"
+
+    df = _add_rul_column(df, onset_idx, failure_idx)
+    return df
+
+
+def inject_sensor_drift(df, onset_frac=None, severity=1.0, seed=None, sub_type=None, target_sensor=None):
+    """
+    Sensor drift: a SENSOR malfunction, not an engine malfunction -- every
+    other sensor keeps behaving normally, which is what makes this fault type
+    recognizable as distinct from a real physical degradation.
+
+    Three sub-types (randomly chosen if not specified):
+      - "bias"  -- a sudden constant offset appears at onset and stays fixed
+      - "drift" -- an offset that grows steadily/linearly over time
+      - "stuck" -- the sensor freezes at a constant value regardless of what
+                   the engine is actually doing (zero variance after onset)
+    """
+    rng = np.random.default_rng(seed)
+    df = df.copy()
+    n = len(df)
+    onset_idx = int(n * (onset_frac if onset_frac else rng.uniform(0.3, 0.6)))
+    failure_idx = n - 1
+
+    sub_type = sub_type if sub_type else rng.choice(["bias", "drift", "stuck"])
+    target_sensor = target_sensor if target_sensor else rng.choice(["oil_pressure", "vibration"])
+
+    df["fault_type"] = "none"
+    ramp_len = failure_idx - onset_idx
+    frozen_value = df.loc[onset_idx, target_sensor] if onset_idx < n else df[target_sensor].iloc[0]
+    bias_amount = rng.uniform(0.15, 0.35) * df[target_sensor].mean() * severity
+
+    for i in range(onset_idx, n):
+        linear_progress = (i - onset_idx) / max(1, ramp_len)
+        if sub_type == "bias":
+            df.loc[i, target_sensor] += bias_amount
+        elif sub_type == "drift":
+            df.loc[i, target_sensor] += bias_amount * linear_progress
+        elif sub_type == "stuck":
+            df.loc[i, target_sensor] = frozen_value
+        df.loc[i, "fault_type"] = "sensor_drift"
+
+    df["drift_sub_type"] = sub_type
+    df["drift_target_sensor"] = target_sensor
+    df = _add_rul_column(df, onset_idx, failure_idx)
+    return df
+
+
+def inject_vibration_fault(df, onset_frac=None, severity=1.0, seed=None):
+    """
+    Vibration fault: abnormal vibration signature combining a rising mean
+    level (progressive imbalance) with rising variance/spikiness (mounting
+    looseness) -- plausible under multiple underlying mechanical causes
+    rather than one narrow pattern.
+    """
+    rng = np.random.default_rng(seed)
+    df = df.copy()
+    n = len(df)
+    onset_idx = int(n * (onset_frac if onset_frac else rng.uniform(0.3, 0.6)))
+    failure_idx = n - 1
+
+    df["fault_type"] = "none"
+    ramp_len = failure_idx - onset_idx
+    vib_end_rise = rng.uniform(1.0, 2.5) * severity
+    for i in range(onset_idx, n):
+        linear_progress = (i - onset_idx) / max(1, ramp_len)
+        progress = _degradation_curve(linear_progress)
+        spike_std = 0.1 + 0.4 * progress
+        df.loc[i, "vibration"] += vib_end_rise * progress + rng.normal(0, spike_std)
+        df.loc[i, "fault_type"] = "vibration_fault"
+
+    df = _add_rul_column(df, onset_idx, failure_idx)
+    return df
+
+
 INJECTORS = {
     "misfire": inject_misfire,
     "overheat": inject_overheat,
     "cooling_degradation": inject_cooling_degradation,
+    "oil_issue": inject_oil_issue,
+    "sensor_drift": inject_sensor_drift,
+    "vibration_fault": inject_vibration_fault,
 }
 
 
@@ -147,6 +249,8 @@ def generate_fault_dataset(fault_type, n_flights=20, duration=300, out_dir="data
         path = os.path.join(out_dir, f"{fault_type}_{i:03d}.csv")
         faulted.to_csv(path, index=False)
     print(f"Generated {n_flights} '{fault_type}' flights in {out_dir}/")
+
+
 def generate_healthy_dataset(n_flights=15, duration=300, out_dir="data/raw"):
     """
     Generates n_flights labeled healthy flights (fault_type='none' throughout).
@@ -166,6 +270,7 @@ def generate_healthy_dataset(n_flights=15, duration=300, out_dir="data/raw"):
         df.to_csv(path, index=False)
     print(f"Generated {n_flights} healthy flights in {out_dir}/")
 
+
 if __name__ == "__main__":
     import matplotlib
     matplotlib.use("Agg")
@@ -173,20 +278,28 @@ if __name__ == "__main__":
 
     healthy = simulate_healthy_flight(duration_timesteps=300, seed=42)
 
-    fig, axes = plt.subplots(3, 2, figsize=(12, 10))
+    fig, axes = plt.subplots(6, 2, figsize=(12, 20))
+    plot_sensors = {
+        "misfire": ["egt", "cht"],
+        "overheat": ["egt", "cht"],
+        "cooling_degradation": ["egt", "cht"],
+        "oil_issue": ["oil_pressure", "oil_temp"],
+        "sensor_drift": ["oil_pressure", "vibration"],
+        "vibration_fault": ["vibration"],
+    }
     for row, (name, fn) in enumerate(INJECTORS.items()):
         faulted = fn(healthy, onset_frac=0.4, seed=7)
-        axes[row, 0].plot(faulted["timestamp"], faulted["egt"], label="EGT")
-        axes[row, 0].plot(faulted["timestamp"], faulted["cht"], label="CHT")
+        for sensor in plot_sensors[name]:
+            axes[row, 0].plot(faulted["timestamp"], faulted[sensor], label=sensor.upper())
         axes[row, 0].axvline(faulted["fault_onset_idx"].iloc[0], color="red", linestyle="--", label="onset")
-        axes[row, 0].set_title(f"{name} — EGT/CHT")
+        sensor_label = "/".join(s.upper() for s in plot_sensors[name])
+        axes[row, 0].set_title(f"{name} -- {sensor_label}")
         axes[row, 0].legend(fontsize=7)
-
         axes[row, 1].plot(faulted["timestamp"], faulted["true_rul_timesteps"])
-        axes[row, 1].set_title(f"{name} — true RUL (ground truth)")
+        axes[row, 1].set_title(f"{name} -- true RUL (ground truth)")
 
     plt.tight_layout()
-    plot_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sanity_check_plot.png")
+    plot_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sanity_check_plot_v2.png")
     try:
         plt.savefig(plot_path, dpi=100)
         print(f"Saved {plot_path} -- open it and confirm curves look physically plausible")
@@ -194,7 +307,7 @@ if __name__ == "__main__":
         print(f"Could not save plot (file may be open in another program): {e}")
         print("Continuing to generate the dataset anyway -- the plot is just a visual check.")
 
-       # generate the real dataset (18 flights per fault type = ~54 total)
+    # generate the real dataset (18 flights per fault type = ~108 total across 6 fault types)
     for ft in INJECTORS:
         generate_fault_dataset(ft, n_flights=18, out_dir="data/raw")
 
