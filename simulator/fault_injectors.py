@@ -147,7 +147,24 @@ def generate_fault_dataset(fault_type, n_flights=20, duration=300, out_dir="data
         path = os.path.join(out_dir, f"{fault_type}_{i:03d}.csv")
         faulted.to_csv(path, index=False)
     print(f"Generated {n_flights} '{fault_type}' flights in {out_dir}/")
-
+def generate_healthy_dataset(n_flights=15, duration=300, out_dir="data/raw"):
+    """
+    Generates n_flights labeled healthy flights (fault_type='none' throughout).
+    Gayatri's classifier needs real 'none' examples to learn from, not just
+    the absence of a fault label -- a flight that's healthy start to finish
+    looks different from a flight that develops a fault only in its second half.
+    """
+    os.makedirs(out_dir, exist_ok=True)
+    for i in range(n_flights):
+        df = simulate_healthy_flight(duration_timesteps=duration, seed=5000 + i)
+        df["fault_type"] = "none"
+        df["true_rul_timesteps"] = -1.0   # not meaningful for a healthy-only flight
+        df["fault_onset_idx"] = -1
+        df["failure_idx"] = -1
+        df["flight_id"] = f"healthy_{i:03d}"
+        path = os.path.join(out_dir, f"healthy_{i:03d}.csv")
+        df.to_csv(path, index=False)
+    print(f"Generated {n_flights} healthy flights in {out_dir}/")
 
 if __name__ == "__main__":
     import matplotlib
@@ -177,6 +194,9 @@ if __name__ == "__main__":
         print(f"Could not save plot (file may be open in another program): {e}")
         print("Continuing to generate the dataset anyway -- the plot is just a visual check.")
 
-    # generate the real dataset (18 flights per fault type = ~54 total)
+       # generate the real dataset (18 flights per fault type = ~54 total)
     for ft in INJECTORS:
         generate_fault_dataset(ft, n_flights=18, out_dir="data/raw")
+
+    # generate healthy-only flights (needed as a real "none" class for the classifier)
+    generate_healthy_dataset(n_flights=15, out_dir="data/raw")
