@@ -1,10 +1,8 @@
-numpy
 pandas
+numpy
 scikit-learn
-matplotlib
-seaborn
-plotly
-scipy
-jupyter
-joblib
+xgboost
+torch
 streamlit
+plotly
+matplotlib
