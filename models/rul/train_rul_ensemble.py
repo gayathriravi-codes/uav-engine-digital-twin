@@ -45,6 +45,11 @@ History:
       calibrated output there equals the raw (still-biased) estimate. It
       "passes" coverage only because the raw estimate already undershoots.
       Not a real fix for that bucket -- documented, not solved.
+    - Added load_ensemble() -- loads a previously trained + saved ensemble
+      (models/scaler/dropped_idx_list) straight from disk, ready to pass
+      into predict_rul_ensemble(). Teammates no longer need to keep
+      trained model objects in memory from a training run -- just call
+      load_ensemble() after train_rul_ensemble.py has been run once.
 
 
 Trains N variant RULRegressor models, then exposes predict_rul_ensemble()
@@ -288,6 +293,53 @@ def train_one_variant(X_train, y_train, train_flight_ids, X_eval, y_eval,
 
 
 # ---------------------------------------------------------------------------
+# Loading a previously trained ensemble from disk -- for teammates who
+# don't want to (re)run training just to get models/scaler/dropped_idx_list
+# in memory.
+# ---------------------------------------------------------------------------
+
+def load_ensemble(model_dir=MODEL_OUT_DIR, n_variants=N_VARIANTS):
+    """
+    Loads a previously trained + saved ensemble from disk, ready to pass
+    straight into predict_rul_ensemble(window, models, scaler, dropped_idx_list).
+
+    Expects the files __main__ saves at the end of training:
+      {model_dir}/rul_model_variant_{i}.pt        (state_dict per variant)
+      {model_dir}/rul_ensemble_scaler.joblib
+      {model_dir}/rul_ensemble_dropped_idx.joblib
+
+    Reconstructs each variant with the correct hidden_size from HIDDEN_SIZES
+    (dropout doesn't matter here -- model.eval() disables it regardless).
+
+    Returns: (models, scaler, dropped_idx_list) -- same shapes
+    predict_rul_ensemble() expects, and the same objects __main__ builds
+    in-memory during training.
+    """
+    scaler_path = os.path.join(model_dir, "rul_ensemble_scaler.joblib")
+    dropped_idx_path = os.path.join(model_dir, "rul_ensemble_dropped_idx.joblib")
+
+    if not os.path.exists(scaler_path):
+        raise FileNotFoundError(
+            f"No trained ensemble found at {model_dir} -- run "
+            f"train_rul_ensemble.py first to train and save one."
+        )
+
+    scaler = joblib.load(scaler_path)
+    dropped_idx_list = joblib.load(dropped_idx_path)
+
+    models = []
+    for i in range(n_variants):
+        model_path = os.path.join(model_dir, f"rul_model_variant_{i}.pt")
+        model = RULRegressorVariant(hidden_size=HIDDEN_SIZES[i])
+        model.load_state_dict(torch.load(model_path, map_location=DEVICE))
+        model.to(DEVICE)
+        model.eval()
+        models.append(model)
+
+    return models, scaler, dropped_idx_list
+
+
+# ---------------------------------------------------------------------------
 # Ensemble inference -- shared function for teammates
 # ---------------------------------------------------------------------------
 
@@ -456,6 +508,7 @@ if __name__ == "__main__":
     print("\nTeammates: if you have a raw 7-sensor window, call")
     print("build_inference_window(raw_window) first, then pass the result to")
     print("predict_rul_ensemble(window, models, scaler, dropped_idx_list)")
-    print("after loading all variant state_dicts (note: hidden_size differs per variant --")
-    print("see HIDDEN_SIZES in this file) and the dropped_idx_list joblib file.")
+    print("-- or, if training has already been run once, just call load_ensemble()")
+    print("to get (models, scaler, dropped_idx_list) straight from the saved files")
+    print("without rerunning training.")
     print("Pass calibrated=True to get Step B's bias-corrected estimate + conformal lower bound.")
