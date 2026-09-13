@@ -20,10 +20,11 @@ data/processed/*
 !data/processed/.gitkeep
 !data/sample/.gitkeep
 
-# Trained models
-models/*
-!models/.gitkeep
-
+# Trained models (binaries only -- code is tracked)
+models/**/*.pt
+models/**/*.joblib
+models/**/*.pth
+models/**/*.h5
 # Environment variables
 .env
 

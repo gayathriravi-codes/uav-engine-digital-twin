@@ -1,8 +1,11 @@
 pandas
 numpy
 scikit-learn
-xgboost
-torch
-streamlit
-plotly
 matplotlib
+seaborn
+plotly
+scipy
+joblib
+streamlit
+torch
+xgboost
