@@ -104,6 +104,65 @@ def inject_overheat(df, onset_frac=None, severity=1.0, seed=None):
     return df
 
 
+def inject_overheat_recovery(df, onset_frac=None, severity=1.0, seed=None,
+                              recovery_trigger_frac=0.6, recovery_strength=0.6):
+    """
+    Overheating with a mid-flight PARTIAL recovery: identical to
+    inject_overheat() up to recovery_trigger_frac of the way through the
+    fault's progression (e.g. simulating a pilot response, load reduction,
+    or a mid-flight corrective action). At that point severity is cut by
+    recovery_strength and the degradation curve re-ramps from that reduced
+    level, instead of continuing the original unchecked climb.
+
+    This exists to give the recalibration-speed feature (how fast a health
+    score recovers after a disturbance -- the team's key differentiator)
+    real examples to detect. All six base injectors degrade monotonically
+    to failure with no recovery phase anywhere, so recalibration-speed
+    currently has nothing to demonstrate on. Deliberately a PARTIAL
+    recovery, not a full fix -- a slow vs. fast recovery is the actual
+    signal recalibration-speed is meant to distinguish, not just a binary
+    "recovered or not."
+
+    recovery_trigger_frac: fraction of the way from onset to failure_idx
+        at which the recovery action takes effect (0-1).
+    recovery_strength: how much severity is cut at the trigger point
+        (0 = no change, 1 = fault fully resolved).
+    """
+    rng = np.random.default_rng(seed)
+    df = df.copy()
+    n = len(df)
+    onset_idx = int(n * (onset_frac if onset_frac else rng.uniform(0.3, 0.6)))
+    failure_idx = n - 1
+
+    df["fault_type"] = "none"
+    ramp_len = failure_idx - onset_idx
+    trigger_idx = onset_idx + int(recovery_trigger_frac * ramp_len)
+
+    egt_end_rise = rng.uniform(60, 110) * severity
+    cht_end_rise = rng.uniform(40, 80) * severity
+
+    for i in range(onset_idx, n):
+        if i < trigger_idx:
+            # identical to inject_overheat() up to the trigger point
+            linear_progress = (i - onset_idx) / max(1, ramp_len)
+            progress = _degradation_curve(linear_progress)
+        else:
+            # severity cut at the trigger; curve re-ramps from the reduced
+            # level over the remaining flight instead of continuing the
+            # original, unchecked ramp
+            reduced_severity = severity * (1 - recovery_strength)
+            post_trigger_len = failure_idx - trigger_idx
+            linear_progress = (i - trigger_idx) / max(1, post_trigger_len)
+            progress = _degradation_curve(linear_progress) * (reduced_severity / max(severity, 1e-6))
+
+        df.loc[i, "egt"] += egt_end_rise * progress + rng.normal(0, 2)
+        df.loc[i, "cht"] += cht_end_rise * progress + rng.normal(0, 1.5)
+        df.loc[i, "fault_type"] = "overheat"
+
+    df = _add_rul_column(df, onset_idx, failure_idx)
+    return df
+
+
 def inject_cooling_degradation(df, onset_frac=None, severity=1.0, seed=None):
     """
     Cooling degradation: CHT rises steadily while EGT stays relatively flat
@@ -237,6 +296,14 @@ INJECTORS = {
     "vibration_fault": inject_vibration_fault,
 }
 
+# Separate registry for recovery-phase variants -- kept OUT of INJECTORS so
+# the main 108-flight dataset, RUL model, and classifier are all untouched.
+# Only used for a small, dedicated batch to validate recalibration-speed
+# detection (see generate_recovery_dataset below).
+RECOVERY_INJECTORS = {
+    "overheat_recovery": inject_overheat_recovery,
+}
+
 
 def generate_fault_dataset(fault_type, n_flights=20, duration=300, out_dir="data/raw"):
     """Generates n_flights labeled flights for one fault type and saves each as a CSV."""
@@ -269,6 +336,27 @@ def generate_healthy_dataset(n_flights=15, duration=300, out_dir="data/raw"):
         path = os.path.join(out_dir, f"healthy_{i:03d}.csv")
         df.to_csv(path, index=False)
     print(f"Generated {n_flights} healthy flights in {out_dir}/")
+
+
+def generate_recovery_dataset(recovery_type="overheat_recovery", n_flights=15,
+                               duration=300, out_dir="data/raw_recovery"):
+    """
+    Generates a SMALL, SEPARATE batch of recovery-phase flights, deliberately
+    kept out of data/raw/ so the main 108-flight dataset (and everything
+    trained on it -- RUL model, ensemble, classifier) is untouched. Only
+    for validating Gayatri's recalibration-speed detection on real recovery
+    examples ahead of demo day.
+    """
+    os.makedirs(out_dir, exist_ok=True)
+    injector = RECOVERY_INJECTORS[recovery_type]
+    for i in range(n_flights):
+        healthy = simulate_healthy_flight(duration_timesteps=duration, seed=8000 + i)
+        faulted = injector(healthy, seed=9000 + i)
+        faulted["flight_id"] = f"{recovery_type}_{i:03d}"
+        path = os.path.join(out_dir, f"{recovery_type}_{i:03d}.csv")
+        faulted.to_csv(path, index=False)
+    print(f"Generated {n_flights} '{recovery_type}' flights in {out_dir}/ "
+          f"(separate from the main dataset)")
 
 
 if __name__ == "__main__":
@@ -313,3 +401,9 @@ if __name__ == "__main__":
 
     # generate healthy-only flights (needed as a real "none" class for the classifier)
     generate_healthy_dataset(n_flights=15, out_dir="data/raw")
+
+    # NOTE: recovery-phase flights are NOT generated automatically here --
+    # run generate_recovery_dataset() separately (see below) so the main
+    # dataset/model pipeline stays untouched. Uncomment to include it in
+    # this script's run:
+    # generate_recovery_dataset()
