@@ -51,31 +51,6 @@ History:
       trained model objects in memory from a training run -- just call
       load_ensemble() after train_rul_ensemble.py has been run once.
 
-  v6 investigation (this session, NOT integrated into production):
-    Tested whether adding an elapsed_fraction feature (fraction of flight
-    elapsed at window end) and/or weighted loss (3x weight on RUL>=250
-    windows) would fix the (250,350) collapse above. Three controlled
-    single-variant experiments (matched hyperparameters: hidden_size=32,
-    dropout=0.1, flight-level bootstrapping, 70 epochs):
-      1. Baseline (10 features):                  RMSE=37.35, RUL>=250 std=4.0
-      2. + elapsed_fraction (11 features):         RMSE=15.92, RUL>=250 std=0.0
-      3. + elapsed_fraction + 3x weighted loss:    RMSE=13.51, RUL>=250 std=0.0
-    elapsed_fraction is a genuine win for OVERALL accuracy (RMSE improved
-    ~64% across the two additive changes), but neither change restored any
-    prediction SPREAD within the RUL>=250 group -- it stayed a single
-    collapsed value in all three configs, just shifted higher each time
-    (192.8 -> 213.6 -> 219.8). Conclusion: not primarily a data-imbalance
-    or missing-feature problem -- looks structural/capacity-related (a
-    hidden_size=32 single-variant LSTM may lack capacity to represent
-    fine distinctions in a range it rarely sees). A real fix would likely
-    need architectural changes (larger capacity, attention, or a
-    specialized high-RUL sub-model) beyond this timeline. The elapsed_fraction
-    code changes are preserved in train_rul_ensemble_v6_experimental.py,
-    ready to integrate later if there's a safe window post-hackathon --
-    NOT merged into this production file to avoid disrupting active
-    team integration (Aashita/Aashitha both wiring against the current
-    10-feature version as of this session).
-
 
 Trains N variant RULRegressor models, then exposes predict_rul_ensemble()
 which returns:
@@ -141,36 +116,43 @@ def _compute_derived_features(window):
     return np.array([egt_slope, total_deviation, vib_variance])
 
 
-def build_inference_window(raw_window):
+def build_inference_window(raw_window, elapsed_fraction):
     """
     Shared helper for teammates / dashboard code doing live inference.
 
     raw_window: np.array shape (window_size, 7) -- just the raw sensor
         readings, in SENSOR_FIELDS order, same as what fault injectors /
         the simulator already produce. No need to know about v5 internals.
+    elapsed_fraction: float, how far into the flight this window's END
+        sits, as a fraction (0..1) of total flight length so far. Always
+        knowable at real inference time (you know how many timesteps
+        have elapsed in a live flight). REQUIRED -- no default, so
+        callers can't silently pass a wrong/neutral value.
 
-    Returns: np.array shape (window_size, 10) -- the 7 raw sensors plus the
-        3 derived features, ready to pass into predict_rul_ensemble().
+    Returns: np.array shape (window_size, 11) -- the 7 raw sensors plus
+        the 3 derived features plus elapsed_fraction, ready to pass into
+        predict_rul_ensemble().
     """
     derived = _compute_derived_features(raw_window)
     derived_broadcast = np.tile(derived, (raw_window.shape[0], 1))
-    return np.concatenate([raw_window, derived_broadcast], axis=1)
-
+    elapsed_col = np.full((raw_window.shape[0], 1), elapsed_fraction)
+    return np.concatenate([raw_window, derived_broadcast, elapsed_col], axis=1)
 
 def create_windows_v5(df, window_size=WINDOW_SIZE, stride=STRIDE):
     sensor_data = df[SENSOR_FIELDS].values
     rul = df["true_rul_timesteps"].values
+    flight_len = len(df)
 
     windows, labels = [], []
     for start in range(0, len(df) - window_size + 1, stride):
         end = start + window_size
         raw_window = sensor_data[start:end]
-        full_window = build_inference_window(raw_window)
+        elapsed_fraction = end / flight_len
+        full_window = build_inference_window(raw_window, elapsed_fraction)
         windows.append(full_window)
         labels.append(rul[end - 1])
 
     return np.array(windows), np.array(labels)
-
 
 def build_windowed_dataset_v5(flights):
     all_windows, all_labels, all_flight_ids = [], [], []
@@ -208,7 +190,7 @@ N_DROPPED_FEATURES = [0, 1, 1, 2, 1, 2, 0]      # how many sensor columns each v
 # ---------------------------------------------------------------------------
 
 class RULRegressorVariant(nn.Module):
-    def __init__(self, n_sensors=len(SENSOR_FIELDS) + 3, hidden_size=32, dropout=0.0):
+    def __init__(self, n_sensors=len(SENSOR_FIELDS) + 4, hidden_size=32, dropout=0.0):
         super().__init__()
         self.lstm = nn.LSTM(input_size=n_sensors, hidden_size=hidden_size, num_layers=1, batch_first=True)
         self.dropout = nn.Dropout(dropout)
