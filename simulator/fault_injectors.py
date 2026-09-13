@@ -169,9 +169,14 @@ if __name__ == "__main__":
         axes[row, 1].set_title(f"{name} — true RUL (ground truth)")
 
     plt.tight_layout()
-    plt.savefig("simulator/sanity_check_plot.png", dpi=100)
-    print("Saved sanity_check_plot.png -- open it and confirm curves look physically plausible")
+    plot_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sanity_check_plot.png")
+    try:
+        plt.savefig(plot_path, dpi=100)
+        print(f"Saved {plot_path} -- open it and confirm curves look physically plausible")
+    except OSError as e:
+        print(f"Could not save plot (file may be open in another program): {e}")
+        print("Continuing to generate the dataset anyway -- the plot is just a visual check.")
 
-    # quick smoke test of the dataset generator (small batch)
+    # generate the real dataset (18 flights per fault type = ~54 total)
     for ft in INJECTORS:
-        generate_fault_dataset(ft, n_flights=2, out_dir="data/raw")
+        generate_fault_dataset(ft, n_flights=18, out_dir="data/raw")
