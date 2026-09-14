@@ -106,6 +106,11 @@ def fit_calibration(X_val, y_val, models, scaler, dropped_idx_list,
     # estimate -- this is the bucket assignment inference will actually use.
     corrected_bucket_ids = np.array([_bucket_index(v, bucket_edges) for v in rough_corrected])
     buckets = {}
+    # Bucket-specific conformal quantile override: (0,50) undercovered
+    # (87.1% vs target 90%) at the global CONFORMAL_QUANTILE, so it gets
+    # a higher quantile -> wider band, while other buckets keep the
+    # global default. See fix_bucket0_conformal.py for the numbers.
+    BUCKET_QUANTILE_OVERRIDES = {0: 0.94}
     for b, edges in enumerate(bucket_edges):
         mask = corrected_bucket_ids == b
         n = int(mask.sum())
@@ -124,7 +129,8 @@ def fit_calibration(X_val, y_val, models, scaler, dropped_idx_list,
 
         corrected_b = preds_b + mean_residual
         corrected_abs_resid = np.abs(true_b - corrected_b)
-        conformal_width = float(np.quantile(corrected_abs_resid, conformal_quantile))
+        bucket_quantile = BUCKET_QUANTILE_OVERRIDES.get(b, conformal_quantile)
+        conformal_width = float(np.quantile(corrected_abs_resid, bucket_quantile))
 
         buckets[b] = {"mean_residual": mean_residual, "conformal_width": conformal_width, "n": n}
 
@@ -182,6 +188,12 @@ def apply_calibration(point_estimate, params):
     info = buckets.get(b1, {"mean_residual": 0.0, "conformal_width": 0.0})
 
     y_cal = point_estimate + info["mean_residual"]
+    # Clamp y_cal to >= 0 BEFORE computing lb. A large negative bias
+    # correction (e.g. on a near-zero true-RUL window) can otherwise push
+    # y_cal negative while lb gets floored at 0 below, inverting the
+    # lb <= y_cal invariant (found via check_per_bucket_coverage on the
+    # test set: true_rul=0.0, y_cal went to -1.33 while lb floored to 0).
+    y_cal = max(y_cal, 0.0)
     lb = y_cal - info["conformal_width"]
 
     lb = min(lb, y_cal)
@@ -217,8 +229,14 @@ def check_per_bucket_coverage(X_test, y_test, models, scaler, dropped_idx_list,
         covered = 0
         idxs = np.where(mask)[0]
         for idx in idxs:
+            # calibrated=False: this coverage check calibrates the point
+            # estimate ITSELF via apply_calibration() below. Calling
+            # predict_rul_ensemble() with no calibrated= arg (default True)
+            # would double-calibrate -- bias-correcting an already
+            # bias-corrected value and rebucketing an already-shifted
+            # estimate, which can violate lb <= y_cal.
             point_estimate = predict_rul_ensemble(
-                X_test[idx], models, scaler, dropped_idx_list
+                X_test[idx], models, scaler, dropped_idx_list, calibrated=False
             )["point_estimate_timesteps"]
             y_cal, lb = apply_calibration(point_estimate, params)
 
