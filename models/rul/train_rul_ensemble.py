@@ -76,6 +76,15 @@ History:
     team integration (Aashita/Aashitha both wiring against the current
     10-feature version as of this session).
 
+  v5.1 (this edit): predict_rul_ensemble()'s return dict now ALSO includes
+    point_estimate_timesteps / rul_lower_bound_timesteps / std_timesteps
+    alongside the existing *_minutes keys, with identical values. This is
+    purely additive -- the *_minutes keys are unchanged and still present,
+    so the dashboard and every existing caller keep working exactly as
+    before. The new *_timesteps keys are there for callers who want the
+    less misleading name (values were always in timesteps, never literal
+    minutes). Nothing reads *_timesteps yet as of this edit.
+
 
 Trains N variant RULRegressor models, then exposes predict_rul_ensemble()
 which returns:
@@ -388,14 +397,21 @@ def predict_rul_ensemble(window, models, scaler, dropped_idx_list, calibrated=Tr
         pre-calibration raw ensemble output instead.
 
     Returns dict:
-      point_estimate_minutes -- mean across variants (or bias-corrected, if calibrated=True)
-      rul_lower_bound_minutes -- min across variants, clipped >= 0
-          (or conformal lower bound around the corrected estimate, if calibrated=True)
-      std_minutes -- spread across variants (for dashboard confidence display).
-          NOT affected by calibrated= -- always the raw ensemble spread.
+      point_estimate_minutes / point_estimate_timesteps -- mean across
+          variants (or bias-corrected, if calibrated=True). Both keys hold
+          the identical value; *_timesteps is an additive alias, added
+          v5.1, alongside the original *_minutes key (unchanged).
+      rul_lower_bound_minutes / rul_lower_bound_timesteps -- min across
+          variants, clipped >= 0 (or conformal lower bound around the
+          corrected estimate, if calibrated=True). Same additive-alias
+          relationship as above.
+      std_minutes / std_timesteps -- spread across variants (for dashboard
+          confidence display). NOT affected by calibrated= -- always the
+          raw ensemble spread. Same additive-alias relationship as above.
 
-    This return shape is locked in and will not change across Step A/B/C
-    work -- safe to build against now.
+    This return shape (including the original *_minutes keys) is locked in
+    and will not change across Step A/B/C work -- safe to build against
+    now. The *_timesteps keys are new (v5.1) and purely additive.
     """
     scaled = scaler.transform(window.reshape(-1, window.shape[-1])).reshape(window.shape)
 
@@ -421,12 +437,18 @@ def predict_rul_ensemble(window, models, scaler, dropped_idx_list, calibrated=Tr
             "point_estimate_minutes": y_cal,
             "rul_lower_bound_minutes": lb_cal,
             "std_minutes": std,
+            "point_estimate_timesteps": y_cal,
+            "rul_lower_bound_timesteps": lb_cal,
+            "std_timesteps": std,
         }
 
     return {
         "point_estimate_minutes": point_estimate,
         "rul_lower_bound_minutes": lower_bound,
         "std_minutes": std,
+        "point_estimate_timesteps": point_estimate,
+        "rul_lower_bound_timesteps": lower_bound,
+        "std_timesteps": std,
     }
 
 
