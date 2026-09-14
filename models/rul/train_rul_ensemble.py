@@ -152,9 +152,18 @@ def _compute_derived_features(window):
         deviation = np.abs(window[:, i] - midpoint) / range_width
         total_deviation += deviation.sum()
 
+    # Changed from sum to mean across the window (divide by window.shape[0]).
+    # A sum accumulates independent per-timestep noise linearly with window
+    # length, causing this feature to explode under sensor noise even when
+    # the noise itself is small/smooth -- confirmed via robustness_tests.py
+    # Test 1 (both i.i.d. and correlated noise variants collapsed the RUL
+    # point estimate to ~0 even at 1% noise). Mean keeps the feature on a
+    # roughly noise-invariant scale regardless of window length.
+    mean_deviation = total_deviation / window.shape[0]
+
     vib_variance = np.var(window[:, vib_idx])
 
-    return np.array([egt_slope, total_deviation, vib_variance])
+    return np.array([egt_slope, mean_deviation, vib_variance])
 
 
 def build_inference_window(raw_window):
@@ -201,6 +210,67 @@ def build_windowed_dataset_v5(flights):
     X = np.concatenate(all_windows, axis=0)
     y = np.concatenate(all_labels, axis=0)
     return X, y, np.array(all_flight_ids)
+
+
+def generate_synthetic_multifault_windows(X, y, n_synthetic, seed=0):
+    """
+    Builds synthetic multi-fault windows by combining pairs of existing
+    (real, single-fault) windows' RAW sensor deviations from healthy
+    midpoints, added together onto one of the two base windows. This
+    approximates what a genuine combined-fault signature would look like,
+    without needing new simulator data.
+
+    Deliberately mirrors robustness_tests.py Test 4's own construction
+    (combining an oil-issue-like and vibration-fault-like signature in one
+    window) -- so the model sees SOME combined-fault variance during
+    training, rather than encountering it for the first time at test time.
+
+    X: np.array shape (n_windows, window_size, 10) -- featurized windows.
+    y: np.array shape (n_windows,) -- true RUL labels.
+    n_synthetic: how many synthetic windows to generate.
+    seed: RNG seed, offset from other seed uses.
+
+    The label for each synthetic window is the MIN of the two source
+    windows' labels (conservative -- a combined fault should not be
+    assumed less urgent than either fault alone).
+
+    Derived features (egt_slope, mean_deviation, vib_variance) are
+    recomputed from the combined raw sensors so each synthetic window is
+    internally consistent.
+
+    Returns: X_synthetic, y_synthetic -- to be concatenated onto the real
+    training set (NOT val/test -- synthetic augmentation is train-only,
+    same principle as bootstrapping/feature bagging/window dropout).
+    """
+    rng = np.random.RandomState(seed + 9000)  # offset from other seed uses
+    n_real = X.shape[0]
+    n_raw_sensors = len(SENSOR_FIELDS)
+
+    idx_a = rng.randint(0, n_real, size=n_synthetic)
+    idx_b = rng.randint(0, n_real, size=n_synthetic)
+
+    X_synthetic = X[idx_a].copy()
+    y_synthetic = np.minimum(y[idx_a], y[idx_b])
+
+    for k in range(n_synthetic):
+        base = X[idx_a[k], :, :n_raw_sensors]
+        other = X[idx_b[k], :, :n_raw_sensors]
+        # Combine deviations from each sensor's healthy midpoint, rather
+        # than raw values, so the combination reflects "both fault
+        # signatures present" rather than an arbitrary blend.
+        combined_raw = base.copy()
+        for s_idx, sensor in enumerate(SENSOR_FIELDS):
+            lo, hi = HEALTHY_RANGES[sensor]
+            midpoint = (lo + hi) / 2
+            base_dev = base[:, s_idx] - midpoint
+            other_dev = other[:, s_idx] - midpoint
+            combined_raw[:, s_idx] = midpoint + base_dev + other_dev
+
+        new_derived = _compute_derived_features(combined_raw)
+        X_synthetic[k, :, :n_raw_sensors] = combined_raw
+        X_synthetic[k, :, n_raw_sensors:] = new_derived
+
+    return X_synthetic, y_synthetic
 # From sensor_importance.py output (RandomForest R^2 = 0.840 on validation):
 #   1. vibration    0.2779
 #   2. cht          0.2354
@@ -294,6 +364,47 @@ def apply_feature_bagging(X, n_dropped, seed):
     return X_bagged, dropped_idx
 
 
+def apply_window_level_dropout(X, drop_prob=0.15, seed=0):
+    """
+    Per-window sensor dropout augmentation (training only).
+
+    Unlike apply_feature_bagging (which zeroes the SAME sensor(s) for
+    every window in a given variant, for ensemble diversity),
+    this zeroes ONE randomly chosen raw sensor in a random SUBSET of
+    individual windows, independently -- simulating what a real
+    single-sensor dropout mid-flight would look like, at training time.
+
+    X: np.array shape (n_windows, window_size, 10) -- featurized windows
+       (7 raw sensors + 3 derived features), same shape as elsewhere in
+       this file.
+    drop_prob: fraction of windows that get one sensor zeroed. 0.15 is a
+       starting point -- tuneable if val RMSE degrades too much.
+    seed: RNG seed, offset from the variant's other seed uses so it
+       doesn't correlate with bootstrap/feature-bagging randomness.
+
+    After zeroing a raw sensor in an affected window, the 3 derived
+    features (egt_slope, mean_deviation, vib_variance) are recomputed
+    from the now-modified raw sensors, so the window stays internally
+    consistent -- same fix pattern used in robustness_tests.py's tests.
+
+    Returns: X_augmented, same shape as X.
+    """
+    rng = np.random.RandomState(seed + 5000)  # offset from other seed uses
+    X_aug = X.copy()
+    n_windows = X_aug.shape[0]
+
+    affected = rng.random(n_windows) < drop_prob
+    affected_idx = np.where(affected)[0]
+
+    for i in affected_idx:
+        sensor_idx = rng.randint(0, len(SENSOR_FIELDS))
+        X_aug[i, :, sensor_idx] = 0.0
+        new_derived = _compute_derived_features(X_aug[i, :, :len(SENSOR_FIELDS)])
+        X_aug[i, :, len(SENSOR_FIELDS):] = new_derived
+
+    return X_aug, affected_idx
+
+
 def train_one_variant(X_train, y_train, train_flight_ids, X_eval, y_eval,
                        seed, dropout, hidden_size, n_dropped_features,
                        epochs=70, batch_size=32, lr=1e-3):
@@ -307,6 +418,11 @@ def train_one_variant(X_train, y_train, train_flight_ids, X_eval, y_eval,
 
     X_train_boot, y_train_boot = bootstrap_by_flight(X_train, y_train, train_flight_ids, seed)
     X_train_boot, dropped_idx = apply_feature_bagging(X_train_boot, n_dropped_features, seed)
+    # Per-window dropout augmentation (training only) -- teaches the model
+    # that a single missing/zeroed sensor mid-flight is a normal pattern,
+    # not something to panic over. Addresses robustness_tests.py Test 2's
+    # large point-estimate swings on single-sensor dropout.
+    X_train_boot, _ = apply_window_level_dropout(X_train_boot, drop_prob=0.15, seed=seed)
     X_eval_bagged = X_eval.copy()
     if len(dropped_idx) > 0:
         X_eval_bagged[:, :, dropped_idx] = 0.0
@@ -384,7 +500,28 @@ def load_ensemble(model_dir=MODEL_OUT_DIR, n_variants=N_VARIANTS):
 # Ensemble inference -- shared function for teammates
 # ---------------------------------------------------------------------------
 
-def predict_rul_ensemble(window, models, scaler, dropped_idx_list, calibrated=True):
+def compute_ood_zscore_distance(window, scaler):
+    """
+    Post-hoc OOD signal: average per-feature |z-score| of this window's
+    values relative to the TRAINING distribution, using the already-fit
+    StandardScaler's mean_ and scale_ (no new fitting step, no covariance
+    matrix, no retrain -- avoids the numerical risk of inverting a
+    possibly near-singular covariance matrix on a modest dataset).
+
+    window: np.array shape (window_size, 10) -- the FEATURIZED window,
+        same shape predict_rul_ensemble() expects.
+    scaler: the already-fit StandardScaler (has .mean_ and .scale_,
+        length 10, one per feature).
+
+    Returns: float -- mean absolute z-score across all timesteps and
+        features. Higher = further from what the model was trained on.
+    """
+    z = (window - scaler.mean_) / scaler.scale_
+    return float(np.abs(z).mean())
+
+
+def predict_rul_ensemble(window, models, scaler, dropped_idx_list, calibrated=True,
+                          ood_gate=True, ood_zscore_threshold=2.0, ood_std_floor=50.0):
     """
     window: np.array shape (window_size, 10) -- the FEATURIZED window
         (7 raw sensors + 3 derived features). If you have a raw 7-column
@@ -438,6 +575,17 @@ def predict_rul_ensemble(window, models, scaler, dropped_idx_list, calibrated=Tr
     lower_bound = max(0.0, float(preds.min()))
     std = float(preds.std())
 
+    # Post-hoc OOD gate: if this window's average feature z-score distance
+    # from the TRAINING distribution exceeds ood_zscore_threshold, inflate
+    # std to reflect genuine uncertainty on an unfamiliar input, rather
+    # than reporting the ensemble's (possibly overconfident) raw spread.
+    # This does NOT change point_estimate or lower_bound -- only std, so
+    # existing callers relying on point_estimate/lower_bound are unaffected.
+    if ood_gate:
+        ood_distance = compute_ood_zscore_distance(window, scaler)
+        if ood_distance > ood_zscore_threshold:
+            std = max(std, ood_std_floor)
+
     if calibrated:
         from calibrate_rul import apply_calibration, load_calibration_params
         y_cal, lb_cal = apply_calibration(point_estimate, load_calibration_params())
@@ -486,6 +634,21 @@ if __name__ == "__main__":
     X_val, y_val = X[val_mask], y[val_mask]
     X_test, y_test = X[test_mask], y[test_mask]
     train_flight_ids = flight_ids[train_mask]
+
+    # Synthetic multi-fault augmentation (train-only, ~10% of real train
+    # windows) -- addresses Test 4's OOD overconfidence by giving the
+    # model SOME combined-fault variance to learn from. Synthetic windows
+    # get a placeholder flight_id so bootstrap_by_flight treats them as
+    # their own single-window "flights" (sampled independently, not
+    # tied to any real flight's other windows).
+    n_synthetic = int(0.10 * len(X_train))
+    print(f"Generating {n_synthetic} synthetic multi-fault training windows ...")
+    X_synth, y_synth = generate_synthetic_multifault_windows(X_train, y_train, n_synthetic, seed=42)
+    synth_flight_ids = np.array([f"synthetic_{i}" for i in range(n_synthetic)])
+    X_train = np.concatenate([X_train, X_synth], axis=0)
+    y_train = np.concatenate([y_train, y_synth], axis=0)
+    train_flight_ids = np.concatenate([train_flight_ids, synth_flight_ids], axis=0)
+    print(f"Train windows after synthetic augmentation: {len(X_train)}")
 
     print(f"Train windows: {len(X_train)} -- Val windows: {len(X_val)} -- Test windows: {len(X_test)}")
     print(f"Train flights: {len(train_flights)} -- Val flights: {len(val_flights)} -- Test flights: {len(test_flights)}")
