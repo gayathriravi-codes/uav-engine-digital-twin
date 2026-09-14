@@ -55,7 +55,7 @@ def check_raw_dataset_windows(models, scaler, dropped_idx_list, data_dir="data/r
             raw_window = sensor_data[start:start + WINDOW_SIZE]
             featurized = build_inference_window(raw_window)
             result = predict_rul_ensemble(featurized, models, scaler, dropped_idx_list, calibrated=True)
-            b = bucket_of(result["point_estimate_minutes"])
+            b = bucket_of(result["point_estimate_timesteps"])
             if b in counts:
                 counts[b] += 1
             total += 1
@@ -100,7 +100,7 @@ def check_whatif_scenario_windows(models, scaler, dropped_idx_list, data_dir="da
                 ]
                 featurized = build_inference_window(raw_window)
                 result = predict_rul_ensemble(featurized, models, scaler, dropped_idx_list, calibrated=True)
-                b = bucket_of(result["point_estimate_minutes"])
+                b = bucket_of(result["point_estimate_timesteps"])
                 if b in counts:
                     counts[b] += 1
                 total += 1

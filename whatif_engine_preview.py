@@ -32,21 +32,14 @@ injector's internal noise, so the only thing that differs between
 scenarios is severity -- isolating its effect instead of comparing two
 different random noise realizations.
 
-CURRENT STATUS: wired to Ashmitha's calibrated RUL ensemble
-(train_rul_ensemble.py's predict_rul_ensemble/load_ensemble), loaded
-once at import time via load_ensemble(). calibrated=True is the
-ensemble's default, so point_estimate_timesteps and rul_lower_bound_timesteps
-are Step B's bias-corrected values; std_timesteps is always the raw
-ensemble spread regardless of calibration. Everything else (SCENARIOS,
-run_whatif) is unchanged, since predict_rul_ensemble returns the same
-{point_estimate_timesteps, rul_lower_bound_timesteps, std_timesteps} shape
+CURRENT STATUS: wired to the single-model baseline (train_rul.py's
+predict_rul/RULRegressor) as a placeholder, since Ashmitha's ensemble
+(train_rul_ensemble.py) doesn't persist its models/scaler/dropped_idx_list
+to disk yet. Once save_ensemble()/load_ensemble() land, swap the import
+block below for hers -- everything else (SCENARIOS, run_whatif) stays
+the same, since predict_rul_ensemble returns the same
+{point_estimate_minutes, rul_lower_bound_minutes, std_minutes} shape
 _predict() maps into here.
-
-KNOWN CAVEAT (per Ashmitha): the (250,350) RUL-minute calibration bucket
-has zero validation windows, so calibration there is a no-op (raw
-estimate, no correction) -- it passes the coverage check on a
-technicality, not because it's meaningfully calibrated. Worth keeping in
-mind if a what-if scenario's point estimate lands in that range.
 
 Run directly for a demo/sanity check: python models/rul/whatif_engine.py
 """
@@ -55,18 +48,21 @@ import sys
 
 import numpy as np
 import pandas as pd
+import torch
+import joblib
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from schema import SENSOR_FIELDS, WINDOW_SIZE
 
-from models.rul.train_rul_ensemble import (
-    predict_rul_ensemble,
-    load_ensemble,
-    build_inference_window,
-)  # noqa: E402
+# --- PLACEHOLDER: single-model baseline, swap for Ashmitha's ensemble later ---
+from models.rul.train_rul import predict_rul, RULRegressor  # noqa: E402
 
 _MODEL_DIR = os.path.dirname(os.path.abspath(__file__))
-_models, _scaler, _dropped_idx_list = load_ensemble(model_dir=_MODEL_DIR)
+_model = RULRegressor()
+_model.load_state_dict(torch.load(os.path.join(_MODEL_DIR, "rul_model.pt")))
+_model.eval()
+_scaler = joblib.load(os.path.join(_MODEL_DIR, "rul_scaler.joblib"))
+# --- end placeholder block ---
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "simulator"))
 from simulate_healthy import simulate_healthy_flight  # noqa: E402
@@ -130,29 +126,28 @@ def _regenerate_window(fault_type, onset_idx, duration, window_start, severity, 
 
 
 def _predict_raw(window):
-    """Unclamped ensemble output dict -- used internally so delta comparisons
-    in run_whatif() are computed on the raw point estimate. Keeping this as
-    a dict (not a bare float) preserves rul_lower_bound_timesteps and
-    std_timesteps for _predict() to pass through."""
-    featurized = build_inference_window(window)
-    return predict_rul_ensemble(featurized, _models, _scaler, _dropped_idx_list)
+    """Unclamped raw model output -- used internally for delta comparisons
+    so small negative predictions near end-of-flight don't all collapse to
+    the same clamped value and erase real differences between scenarios."""
+    scaled = _scaler.transform(window.reshape(-1, window.shape[-1])).reshape(1, window.shape[0], -1)
+    with torch.no_grad():
+        return _model(torch.tensor(scaled, dtype=torch.float32)).item()
 
 
 def _predict(window):
     """
-    Wraps the ensemble's {point_estimate_timesteps, rul_lower_bound_timesteps,
-    std_timesteps} output into the shape run_whatif() expects.
-    point_estimate_timesteps and rul_lower_bound_timesteps are clamped at 0
-    (RUL can't be negative) for display, but delta comparisons in
-    run_whatif() use the raw (unclamped) value so real scenario differences
-    don't get erased by the clamp near end-of-flight.
+    Wraps the current backing model (placeholder: single-model baseline)
+    into the shared {point_estimate_minutes, rul_lower_bound_minutes,
+    std_minutes} shape. point_estimate_minutes is clamped at 0 (RUL can't
+    be negative) for display, but delta comparisons in run_whatif() use
+    the raw value so real scenario differences don't get erased by the
+    clamp near end-of-flight.
     """
-    result = _predict_raw(window)
-    raw = result["point_estimate_timesteps"]
+    raw = _predict_raw(window)
     return {
-        "point_estimate_timesteps": max(0.0, raw),
-        "rul_lower_bound_timesteps": max(0.0, result["rul_lower_bound_timesteps"]),
-        "std_timesteps": result["std_timesteps"],
+        "point_estimate_minutes": max(0.0, raw),
+        "rul_lower_bound_minutes": max(0.0, raw),  # no ensemble yet -- placeholder
+        "std_minutes": 0.0,                          # no ensemble yet -- placeholder
         "_raw": raw,
     }
 
@@ -169,7 +164,7 @@ def run_whatif(fault_type, onset_idx, duration, window_start, seed=42, scenario_
 
     Returns a list of dicts, one per scenario, each with:
         - scenario, label
-        - point_estimate_timesteps, rul_lower_bound_timesteps, std_timesteps
+        - point_estimate_minutes, rul_lower_bound_minutes, std_minutes
         - delta_minutes: change vs "continue_current" baseline, computed
           on UNCLAMPED raw values so it stays meaningful near end-of-flight
     """
@@ -192,9 +187,9 @@ def run_whatif(fault_type, onset_idx, duration, window_start, seed=42, scenario_
         results.append({
             "scenario": name,
             "label": SCENARIOS[name]["label"],
-            "point_estimate_timesteps": prediction["point_estimate_timesteps"],
-            "rul_lower_bound_timesteps": prediction["rul_lower_bound_timesteps"],
-            "std_timesteps": prediction["std_timesteps"],
+            "point_estimate_minutes": prediction["point_estimate_minutes"],
+            "rul_lower_bound_minutes": prediction["rul_lower_bound_minutes"],
+            "std_minutes": prediction["std_minutes"],
             "delta_minutes": prediction["_raw"] - baseline_estimate,
         })
 
@@ -237,12 +232,12 @@ if __name__ == "__main__":
 
     print(f"Flight: {os.path.basename(sample_path)}  |  fault_type={fault_type}  "
           f"onset_idx={onset_idx}  duration={duration}  window_start={window_start}\n")
-    print("Running against Ashmitha's calibrated RUL ensemble "
-          "(calibrated=True, per-bucket bias correction + conformal bounds).\n")
+    print("NOTE: running against the single-model placeholder -- lower_bound/std")
+    print("are not meaningful yet (they'll come from Ashmitha's ensemble once wired in).\n")
 
     results = run_whatif(fault_type, onset_idx, duration, window_start)
 
     for r in results:
         print(f"{r['label']:<35} "
-              f"point_est={r['point_estimate_timesteps']:7.1f}  "
+              f"point_est={r['point_estimate_minutes']:7.1f}  "
               f"delta={r['delta_minutes']:+7.1f}")

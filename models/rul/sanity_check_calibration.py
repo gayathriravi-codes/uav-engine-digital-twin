@@ -48,5 +48,5 @@ if __name__ == "__main__":
     for idx in sample_idxs:
         raw = predict_rul_ensemble(X_val[idx], models, scaler, dropped_idx_list, calibrated=False)
         cal = predict_rul_ensemble(X_val[idx], models, scaler, dropped_idx_list, calibrated=True)
-        print(f"{y_val[idx]:7.1f} {raw['point_estimate_minutes']:8.1f} {raw['rul_lower_bound_minutes']:8.1f} | "
-              f"{cal['point_estimate_minutes']:8.1f} {cal['rul_lower_bound_minutes']:8.1f}")
+        print(f"{y_val[idx]:7.1f} {raw['point_estimate_timesteps']:8.1f} {raw['rul_lower_bound_timesteps']:8.1f} | "
+              f"{cal['point_estimate_timesteps']:8.1f} {cal['rul_lower_bound_timesteps']:8.1f}")

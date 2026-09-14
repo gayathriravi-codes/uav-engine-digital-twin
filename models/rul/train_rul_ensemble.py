@@ -27,8 +27,8 @@ History:
       Per-window only, not per-flight cumulative, per the time-constrained
       decision. Lives here, not in train_rul.py, so the original
       single-model baseline (7 sensors only) stays untouched.
-    - predict_rul_ensemble's OUTPUT shape is unchanged (point_estimate_minutes,
-      rul_lower_bound_minutes, std_minutes) so the dashboard doesn't break.
+    - predict_rul_ensemble's OUTPUT shape is unchanged (point_estimate_timesteps,
+      rul_lower_bound_timesteps, std_timesteps) so the dashboard doesn't break.
       Its INPUT now needs the 10-column featurized window, not the raw
       7-column one -- use build_inference_window() below to convert.
     - Step B (this edit): predict_rul_ensemble() takes a new `calibrated`
@@ -76,20 +76,27 @@ History:
     team integration (Aashita/Aashitha both wiring against the current
     10-feature version as of this session).
 
-  v5.1 (this edit): predict_rul_ensemble()'s return dict now ALSO includes
-    point_estimate_timesteps / rul_lower_bound_timesteps / std_timesteps
-    alongside the existing *_minutes keys, with identical values. This is
-    purely additive -- the *_minutes keys are unchanged and still present,
-    so the dashboard and every existing caller keep working exactly as
-    before. The new *_timesteps keys are there for callers who want the
-    less misleading name (values were always in timesteps, never literal
-    minutes). Nothing reads *_timesteps yet as of this edit.
+  v6 rename (Ashmitha, merged into this file): predict_rul_ensemble()'s
+    OUTPUT keys were renamed from *_minutes to *_timesteps everywhere in
+    docstrings, asserts, and the __main__ sanity-check block, since the
+    values were always in timesteps, never literal minutes.
+
+  v6.1 (this merge, Aashita): the two `return {}` blocks in
+    predict_rul_ensemble() were about to lose the old *_minutes keys
+    entirely, which would break the dashboard team's app.py/mock_data.py
+    (they still read rul_estimate_minutes, rul_lower_bound_minutes,
+    projected_rul_minutes as of the last check). Resolved the merge to
+    KEEP BOTH key sets in those two return dicts only -- *_timesteps
+    alongside *_minutes, identical values -- so nothing downstream breaks
+    until the dashboard team confirms they've switched over. Everywhere
+    else (docstrings, asserts, __main__ prints) uses the new *_timesteps
+    names only, per Ashmitha's rename.
 
 
 Trains N variant RULRegressor models, then exposes predict_rul_ensemble()
 which returns:
   - point estimate (mean of variant predictions)
-  - rul_lower_bound_minutes (MIN of variant predictions, clipped >= 0)
+  - rul_lower_bound_timesteps (MIN of variant predictions, clipped >= 0)
   - std across variants (useful for the dashboard's confidence display)
 
 Run: python models/rul/train_rul_ensemble.py   (from project root, AeroTwin/)
@@ -389,29 +396,30 @@ def predict_rul_ensemble(window, models, scaler, dropped_idx_list, calibrated=Tr
         in the SAME order as `models`.
     calibrated: if True, applies Step B's per-bucket bias correction +
         conformal lower bound (see calibrate_rul.py) before returning.
-        Return dict KEYS are unchanged either way -- point_estimate_minutes
-        and rul_lower_bound_minutes are just corrected values when True.
+        Return dict KEYS are unchanged either way -- point_estimate_timesteps
+        and rul_lower_bound_timesteps are just corrected values when True.
         Defaults to True (Step B calibration verified, see changelog above).
         Existing callers passing no calibrated= arg now get the bias-corrected
         estimate automatically. Pass calibrated=False explicitly to get the
         pre-calibration raw ensemble output instead.
 
     Returns dict:
-      point_estimate_minutes / point_estimate_timesteps -- mean across
+      point_estimate_timesteps / point_estimate_minutes -- mean across
           variants (or bias-corrected, if calibrated=True). Both keys hold
-          the identical value; *_timesteps is an additive alias, added
-          v5.1, alongside the original *_minutes key (unchanged).
-      rul_lower_bound_minutes / rul_lower_bound_timesteps -- min across
+          the identical value; *_minutes is kept as a TEMPORARY alias for
+          the dashboard team, which still reads the old name as of the
+          last check -- remove it once they confirm they've switched over.
+      rul_lower_bound_timesteps / rul_lower_bound_minutes -- min across
           variants, clipped >= 0 (or conformal lower bound around the
-          corrected estimate, if calibrated=True). Same additive-alias
-          relationship as above.
-      std_minutes / std_timesteps -- spread across variants (for dashboard
+          corrected estimate, if calibrated=True). Same alias relationship
+          as above.
+      std_timesteps / std_minutes -- spread across variants (for dashboard
           confidence display). NOT affected by calibrated= -- always the
-          raw ensemble spread. Same additive-alias relationship as above.
+          raw ensemble spread. Same alias relationship as above.
 
-    This return shape (including the original *_minutes keys) is locked in
+    This return shape (including the *_minutes alias keys) is locked in
     and will not change across Step A/B/C work -- safe to build against
-    now. The *_timesteps keys are new (v5.1) and purely additive.
+    now.
     """
     scaled = scaler.transform(window.reshape(-1, window.shape[-1])).reshape(window.shape)
 
@@ -434,21 +442,21 @@ def predict_rul_ensemble(window, models, scaler, dropped_idx_list, calibrated=Tr
         from calibrate_rul import apply_calibration, load_calibration_params
         y_cal, lb_cal = apply_calibration(point_estimate, load_calibration_params())
         return {
-            "point_estimate_minutes": y_cal,
-            "rul_lower_bound_minutes": lb_cal,
-            "std_minutes": std,
             "point_estimate_timesteps": y_cal,
             "rul_lower_bound_timesteps": lb_cal,
             "std_timesteps": std,
+            "point_estimate_minutes": y_cal,
+            "rul_lower_bound_minutes": lb_cal,
+            "std_minutes": std,
         }
 
     return {
-        "point_estimate_minutes": point_estimate,
-        "rul_lower_bound_minutes": lower_bound,
-        "std_minutes": std,
         "point_estimate_timesteps": point_estimate,
         "rul_lower_bound_timesteps": lower_bound,
         "std_timesteps": std,
+        "point_estimate_minutes": point_estimate,
+        "rul_lower_bound_minutes": lower_bound,
+        "std_minutes": std,
     }
 
 
@@ -518,11 +526,11 @@ if __name__ == "__main__":
     for i in range(min(5, len(X_val))):
         result = predict_rul_ensemble(X_val[i], models, scaler, dropped_idx_list)
         true_val = y_val[i]
-        assert result["rul_lower_bound_minutes"] <= result["point_estimate_minutes"] + 1e-6, \
+        assert result["rul_lower_bound_timesteps"] <= result["point_estimate_timesteps"] + 1e-6, \
             "Lower bound exceeded point estimate!"
-        assert result["rul_lower_bound_minutes"] >= 0, "Lower bound went negative!"
-        print(f"  true={true_val:7.1f}  point_est={result['point_estimate_minutes']:7.1f}  "
-              f"lower_bound={result['rul_lower_bound_minutes']:7.1f}  std={result['std_minutes']:6.1f}")
+        assert result["rul_lower_bound_timesteps"] >= 0, "Lower bound went negative!"
+        print(f"  true={true_val:7.1f}  point_est={result['point_estimate_timesteps']:7.1f}  "
+              f"lower_bound={result['rul_lower_bound_timesteps']:7.1f}  std={result['std_timesteps']:6.1f}")
 
     os.makedirs(MODEL_OUT_DIR, exist_ok=True)
     for i, model in enumerate(models):
