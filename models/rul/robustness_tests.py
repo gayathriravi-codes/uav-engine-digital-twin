@@ -25,22 +25,57 @@ def test_1_sensor_noise(models, scaler, dropped_idx_list, sample_window, sample_
     print(f"Baseline (no noise): point_est={baseline['point_estimate_timesteps']:.1f}  "
           f"lower_bound={baseline['rul_lower_bound_timesteps']:.1f}  std={baseline['std_timesteps']:.1f}")
 
+    feature_names = ["egt_slope", "integrated_deviation", "vibration_variance"]
+    n_steps = sample_window.shape[0]
+
     for noise_pct in [0.01, 0.05, 0.10]:
-        noisy_window = sample_window.copy()
-        noise = np.random.normal(0, noise_pct * np.abs(noisy_window[:, :7]).mean(), noisy_window[:, :7].shape)
-        noisy_window[:, :7] += noise  # only perturb the 7 raw sensor columns
+        noise_scale = noise_pct * np.abs(sample_window[:, :7]).mean()
+        print(f"\n  --- Noise level: {noise_pct:.0%} ---")
 
-        # Recompute derived features from the NOISY raw sensors, so the
-        # window is internally consistent (matches what real noisy sensor
-        # data would actually look like, not a contradictory mix of noisy
-        # raw sensors + stale pre-noise derived features).
-        new_derived = _compute_derived_features(noisy_window[:, :7])
-        noisy_window[:, 7:] = np.tile(new_derived, (noisy_window.shape[0], 1))
+        # ---------------- Variant A: independent (i.i.d.) noise ----------------
+        # Original harsh test -- independent Gaussian noise per timestep,
+        # per sensor. Worst-case, not typical-case: real sensor noise is
+        # usually smoother/correlated between adjacent readings.
+        rng_a = np.random.RandomState(42)
+        noisy_window_a = sample_window.copy()
+        noise_a = rng_a.normal(0, noise_scale, noisy_window_a[:, :7].shape)
+        noisy_window_a[:, :7] += noise_a
 
-        result = predict_rul_ensemble(noisy_window, models, scaler, dropped_idx_list)
-        shift = abs(result['point_estimate_timesteps'] - baseline['point_estimate_timesteps'])
-        print(f"  +{noise_pct:.0%} noise: point_est={result['point_estimate_timesteps']:.1f}  "
-              f"(shift={shift:.1f})  std={result['std_timesteps']:.1f}")
+        new_derived_a = _compute_derived_features(noisy_window_a[:, :7])
+        noisy_window_a[:, 7:] = np.tile(new_derived_a, (n_steps, 1))
+
+        print(f"    Variant A (independent noise):")
+        for name, val in zip(feature_names, new_derived_a):
+            print(f"      [debug] {name} = {val:.4f}")
+        print(f"      [debug] any NaN/Inf in derived features? {not np.all(np.isfinite(new_derived_a))}")
+
+        result_a = predict_rul_ensemble(noisy_window_a, models, scaler, dropped_idx_list)
+        shift_a = abs(result_a['point_estimate_timesteps'] - baseline['point_estimate_timesteps'])
+        print(f"      point_est={result_a['point_estimate_timesteps']:.1f}  "
+              f"(shift={shift_a:.1f})  std={result_a['std_timesteps']:.1f}")
+
+        # ---------------- Variant B: smoothed/correlated noise ----------------
+        # Same noise magnitude, but run through a cumulative running average
+        # so adjacent noise values are correlated instead of independent --
+        # closer to how real sensor noise/drift typically behaves.
+        rng_b = np.random.RandomState(42)
+        noisy_window_b = sample_window.copy()
+        raw_noise_b = rng_b.normal(0, noise_scale, noisy_window_b[:, :7].shape)
+        smoothed_noise_b = np.cumsum(raw_noise_b, axis=0) / np.arange(1, n_steps + 1)[:, None]
+        noisy_window_b[:, :7] += smoothed_noise_b
+
+        new_derived_b = _compute_derived_features(noisy_window_b[:, :7])
+        noisy_window_b[:, 7:] = np.tile(new_derived_b, (n_steps, 1))
+
+        print(f"    Variant B (smoothed/correlated noise):")
+        for name, val in zip(feature_names, new_derived_b):
+            print(f"      [debug] {name} = {val:.4f}")
+        print(f"      [debug] any NaN/Inf in derived features? {not np.all(np.isfinite(new_derived_b))}")
+
+        result_b = predict_rul_ensemble(noisy_window_b, models, scaler, dropped_idx_list)
+        shift_b = abs(result_b['point_estimate_timesteps'] - baseline['point_estimate_timesteps'])
+        print(f"      point_est={result_b['point_estimate_timesteps']:.1f}  "
+              f"(shift={shift_b:.1f})  std={result_b['std_timesteps']:.1f}")
 
 
 def test_2_core_sensor_dropout(models, scaler, dropped_idx_list, sample_window, sample_label):
