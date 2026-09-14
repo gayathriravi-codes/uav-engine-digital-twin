@@ -87,7 +87,7 @@ def check_differentiated(results, tol=1e-6):
     interventions = [r for r in results if r is not baseline]
 
     baseline_is_lowest = all(
-        baseline["point_estimate_minutes"] <= r["point_estimate_minutes"]
+        baseline["point_estimate_timesteps"] <= r["point_estimate_timesteps"]
         for r in interventions
     )
     all_flat = all(abs(r["delta_minutes"]) < tol for r in interventions)
@@ -140,7 +140,7 @@ def main():
             continue
 
         for r in results:
-            print(f"  {r['label']:<38} point_est={r['point_estimate_minutes']:>8.1f}"
+            print(f"  {r['label']:<38} point_est={r['point_estimate_timesteps']:>8.1f}"
                   f"  delta={r['delta_minutes']:>+8.1f}")
 
         baseline_is_lowest, all_flat = check_differentiated(results)

@@ -21,7 +21,7 @@ target_mask = (y_val >= 250) & (y_val < 350)
 print(f"True windows in (250,350): {target_mask.sum()}")
 
 raw_preds = np.array([
-    predict_rul_ensemble(X_val[i], models, scaler, dropped_idx_list, calibrated=False)["point_estimate_minutes"]
+    predict_rul_ensemble(X_val[i], models, scaler, dropped_idx_list, calibrated=False)["point_estimate_timesteps"]
     for i in np.where(target_mask)[0]
 ])
 

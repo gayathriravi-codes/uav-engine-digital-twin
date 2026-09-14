@@ -27,8 +27,8 @@ History:
       Per-window only, not per-flight cumulative, per the time-constrained
       decision. Lives here, not in train_rul.py, so the original
       single-model baseline (7 sensors only) stays untouched.
-    - predict_rul_ensemble's OUTPUT shape is unchanged (point_estimate_minutes,
-      rul_lower_bound_minutes, std_minutes) so the dashboard doesn't break.
+    - predict_rul_ensemble's OUTPUT shape is unchanged (point_estimate_timesteps,
+      rul_lower_bound_timesteps, std_timesteps) so the dashboard doesn't break.
       Its INPUT now needs the 10-column featurized window, not the raw
       7-column one -- use build_inference_window() below to convert.
     - Step B (this edit): predict_rul_ensemble() takes a new `calibrated`
@@ -80,7 +80,7 @@ History:
 Trains N variant RULRegressor models, then exposes predict_rul_ensemble()
 which returns:
   - point estimate (mean of variant predictions)
-  - rul_lower_bound_minutes (MIN of variant predictions, clipped >= 0)
+  - rul_lower_bound_timesteps (MIN of variant predictions, clipped >= 0)
   - std across variants (useful for the dashboard's confidence display)
 
 Run: python models/rul/train_rul_ensemble.py   (from project root, AeroTwin/)
@@ -380,18 +380,18 @@ def predict_rul_ensemble(window, models, scaler, dropped_idx_list, calibrated=Tr
         in the SAME order as `models`.
     calibrated: if True, applies Step B's per-bucket bias correction +
         conformal lower bound (see calibrate_rul.py) before returning.
-        Return dict KEYS are unchanged either way -- point_estimate_minutes
-        and rul_lower_bound_minutes are just corrected values when True.
+        Return dict KEYS are unchanged either way -- point_estimate_timesteps
+        and rul_lower_bound_timesteps are just corrected values when True.
         Defaults to True (Step B calibration verified, see changelog above).
         Existing callers passing no calibrated= arg now get the bias-corrected
         estimate automatically. Pass calibrated=False explicitly to get the
         pre-calibration raw ensemble output instead.
 
     Returns dict:
-      point_estimate_minutes -- mean across variants (or bias-corrected, if calibrated=True)
-      rul_lower_bound_minutes -- min across variants, clipped >= 0
+      point_estimate_timesteps -- mean across variants (or bias-corrected, if calibrated=True)
+      rul_lower_bound_timesteps -- min across variants, clipped >= 0
           (or conformal lower bound around the corrected estimate, if calibrated=True)
-      std_minutes -- spread across variants (for dashboard confidence display).
+      std_timesteps -- spread across variants (for dashboard confidence display).
           NOT affected by calibrated= -- always the raw ensemble spread.
 
     This return shape is locked in and will not change across Step A/B/C
@@ -418,15 +418,15 @@ def predict_rul_ensemble(window, models, scaler, dropped_idx_list, calibrated=Tr
         from calibrate_rul import apply_calibration, load_calibration_params
         y_cal, lb_cal = apply_calibration(point_estimate, load_calibration_params())
         return {
-            "point_estimate_minutes": y_cal,
-            "rul_lower_bound_minutes": lb_cal,
-            "std_minutes": std,
+            "point_estimate_timesteps": y_cal,
+            "rul_lower_bound_timesteps": lb_cal,
+            "std_timesteps": std,
         }
 
     return {
-        "point_estimate_minutes": point_estimate,
-        "rul_lower_bound_minutes": lower_bound,
-        "std_minutes": std,
+        "point_estimate_timesteps": point_estimate,
+        "rul_lower_bound_timesteps": lower_bound,
+        "std_timesteps": std,
     }
 
 
@@ -496,11 +496,11 @@ if __name__ == "__main__":
     for i in range(min(5, len(X_val))):
         result = predict_rul_ensemble(X_val[i], models, scaler, dropped_idx_list)
         true_val = y_val[i]
-        assert result["rul_lower_bound_minutes"] <= result["point_estimate_minutes"] + 1e-6, \
+        assert result["rul_lower_bound_timesteps"] <= result["point_estimate_timesteps"] + 1e-6, \
             "Lower bound exceeded point estimate!"
-        assert result["rul_lower_bound_minutes"] >= 0, "Lower bound went negative!"
-        print(f"  true={true_val:7.1f}  point_est={result['point_estimate_minutes']:7.1f}  "
-              f"lower_bound={result['rul_lower_bound_minutes']:7.1f}  std={result['std_minutes']:6.1f}")
+        assert result["rul_lower_bound_timesteps"] >= 0, "Lower bound went negative!"
+        print(f"  true={true_val:7.1f}  point_est={result['point_estimate_timesteps']:7.1f}  "
+              f"lower_bound={result['rul_lower_bound_timesteps']:7.1f}  std={result['std_timesteps']:6.1f}")
 
     os.makedirs(MODEL_OUT_DIR, exist_ok=True)
     for i, model in enumerate(models):

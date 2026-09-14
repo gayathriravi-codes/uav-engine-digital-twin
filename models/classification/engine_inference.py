@@ -212,15 +212,14 @@ def run_engine_inference(df):
         # The underlying model target is
         # true_rul_timesteps.
         #
-        # The original RUL module uses legacy
-        # *_minutes keys, so we expose the correct
-        # unit at this integration layer.
+        # The RUL module now returns *_timesteps keys
+        # directly, matching this integration layer.        # unit at this integration layer.
         # ----------------------------------------------------
 
         "rul_estimate_timesteps": round(
             float(
                 rul_result[
-                    "point_estimate_minutes"
+                    "point_estimate_timesteps"
                 ]
             ),
             2,
@@ -229,7 +228,7 @@ def run_engine_inference(df):
         "rul_lower_bound_timesteps": round(
             float(
                 rul_result[
-                    "rul_lower_bound_minutes"
+                    "rul_lower_bound_timesteps"
                 ]
             ),
             2,
@@ -238,7 +237,7 @@ def run_engine_inference(df):
         "rul_uncertainty_timesteps": round(
             float(
                 rul_result[
-                    "std_minutes"
+                    "std_timesteps"
                 ]
             ),
             2,

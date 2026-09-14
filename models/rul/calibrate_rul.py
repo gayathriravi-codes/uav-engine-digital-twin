@@ -79,7 +79,7 @@ def fit_calibration(X_val, y_val, models, scaler, dropped_idx_list,
     from train_rul_ensemble import predict_rul_ensemble
 
     point_estimates = np.array([
-        predict_rul_ensemble(X_val[i], models, scaler, dropped_idx_list)["point_estimate_minutes"]
+        predict_rul_ensemble(X_val[i], models, scaler, dropped_idx_list)["point_estimate_timesteps"]
         for i in range(len(X_val))
     ])
     y_val = np.asarray(y_val, dtype=float)
@@ -219,7 +219,7 @@ def check_per_bucket_coverage(X_test, y_test, models, scaler, dropped_idx_list,
         for idx in idxs:
             point_estimate = predict_rul_ensemble(
                 X_test[idx], models, scaler, dropped_idx_list
-            )["point_estimate_minutes"]
+            )["point_estimate_timesteps"]
             y_cal, lb = apply_calibration(point_estimate, params)
 
             assert lb <= y_cal + 1e-6, "Lower bound exceeded corrected point estimate!"
@@ -257,10 +257,10 @@ def predict_rul_calibrated(window, models, scaler, dropped_idx_list):
 
     raw = predict_rul_ensemble(window, models, scaler, dropped_idx_list, calibrated=False)
     params = load_calibration_params()
-    y_cal, lb = apply_calibration(raw["point_estimate_minutes"], params)
+    y_cal, lb = apply_calibration(raw["point_estimate_timesteps"], params)
 
     return {
-        "point_estimate_minutes": y_cal,
-        "rul_lower_bound_minutes": lb,
-        "std_minutes": raw["std_minutes"],
+        "point_estimate_timesteps": y_cal,
+        "rul_lower_bound_timesteps": lb,
+        "std_timesteps": raw["std_timesteps"],
     }
