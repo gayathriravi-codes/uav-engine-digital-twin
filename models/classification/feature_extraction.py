@@ -34,22 +34,35 @@ def sensor_health(value, lower, upper):
     1.0 = inside healthy operating range
     Lower values = degradation below range
     Higher values = degradation above range
+
+    Overshoot is normalized by the healthy range's WIDTH
+    (upper - lower), not by the raw threshold value. Dividing
+    by the threshold itself under-penalizes sensors with large
+    absolute healthy bounds (e.g. egt, cht) -- a fatal overshoot
+    on those sensors was only producing a ~5-8% score drop.
     """
+
+    range_width = upper - lower
 
     if lower <= value <= upper:
         return 1.0
 
     if value < lower:
-        score = 1 - (lower - value) / lower
+        score = 1 - (lower - value) / range_width
     else:
-        score = 1 - (value - upper) / upper
+        score = 1 - (value - upper) / range_width
 
     return np.clip(score, 0.0, 1.0)
-
 
 def calculate_health_score(df):
     """
     Calculate interpretable engine health score for every row.
+
+    Blends the weighted sensor average with the WORST single-sensor
+    score, so one badly-degraded sensor can't be diluted away by six
+    healthy ones (e.g. vibration_fault only affects vibration, but a
+    pure average barely moves). Blend weights (0.6/0.4) are a first
+    pass -- tune against real data if the split isn't right.
 
     Returns a pandas Series in the range 0-100.
     """
@@ -59,6 +72,7 @@ def calculate_health_score(df):
     for _, row in df.iterrows():
 
         weighted_score = 0.0
+        worst_sensor_score = 1.0
 
         for sensor in SENSOR_FIELDS:
             lower, upper = HEALTHY_RANGES[sensor]
@@ -70,11 +84,12 @@ def calculate_health_score(df):
             )
 
             weighted_score += SENSOR_WEIGHTS[sensor] * h
+            worst_sensor_score = min(worst_sensor_score, h)
 
-        scores.append(100 * weighted_score)
+        blended = 0.6 * weighted_score + 0.4 * worst_sensor_score
+        scores.append(100 * blended)
 
     return pd.Series(scores, index=df.index)
-
 
 # ---------------------------------------------------------
 # WINDOW FEATURES

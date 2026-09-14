@@ -278,7 +278,13 @@ def predict_fault(window):
 
     health_scores = calculate_health_score(window)
 
-    mean_health = float(health_scores.mean())
+    # Blend mean with min across the window so a brief severe dip
+    # (e.g. misfire's intermittent spikes) isn't averaged away by
+    # the rest of an otherwise-normal-looking window. Blend weights
+    # (0.7/0.3) are a first pass -- tune against real data if needed.
+    mean_health = float(
+        0.7 * health_scores.mean() + 0.3 * health_scores.min()
+    )
 
     # --------------------------------------------------------
     # XGBoost prediction
