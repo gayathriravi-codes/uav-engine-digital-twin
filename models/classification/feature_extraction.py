@@ -135,6 +135,18 @@ def extract_window_features(window):
 
         # Trend inside window
         features[f"{sensor}_slope"] = calculate_slope(values)
+        
+        # Count of rows outside this sensor's healthy range within the
+        # window. Added to help the classifier detect intermittent faults
+        # (e.g. misfire) that don't shift the window-wide mean/std much
+        # but do affect a distinct subset of rows - mirrors the density
+        # threshold already used in get_window_label()'s misfire_count
+        # special case, but exposes it to the model as a real feature
+        # instead of only being used for ground-truth labeling.
+        lower, upper = HEALTHY_RANGES[sensor]
+        features[f"{sensor}_abnormal_count"] = int(
+            np.sum((values < lower) | (values > upper))
+        )
 
     # -----------------------------------------------------
     # Health-score features

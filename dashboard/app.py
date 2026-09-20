@@ -6,6 +6,16 @@ from pathlib import Path
 
 from models.classification.engine_inference import run_engine_inference
 from models.rul.whatif_engine import run_whatif
+from models.physics_residual import (
+    compute_residuals as physics_compute_residuals,
+    physics_anomaly_score,
+    load_baselines as load_physics_baselines,
+)
+import joblib
+from mission_reliability import recommend_mission_action
+from mission_smoothing import MissionSmoother
+from mission_hysteresis import HysteresisGate
+from sensor_trust import evaluate_sensor_trust
 
 
 # ============================================================
@@ -230,6 +240,24 @@ for key, value in defaults.items():
 # ============================================================
 # DATA FUNCTIONS
 # ============================================================
+
+@st.cache_resource(show_spinner=False)
+def get_physics_baselines():
+    models = load_physics_baselines()
+    healthy_stats = joblib.load("models/physics_healthy_stats.joblib")
+    return models, healthy_stats
+
+
+@st.cache_resource(show_spinner=False)
+def get_mission_state():
+    """
+    MissionSmoother/HysteresisGate hold state across ticks (rolling
+    windows, downgrade-streak counters) - cached as a resource so the
+    SAME instances persist across Streamlit reruns, rather than
+    resetting every interaction.
+    """
+    return MissionSmoother(window=3), HysteresisGate(downgrade_streak=2)
+
 
 @st.cache_data
 def get_flights():
@@ -749,6 +777,39 @@ def dashboard():
 
     health = float(inference["health_score"])
 
+    # --- Physics-informed residual health score ---
+    try:
+        physics_models, physics_healthy_stats = get_physics_baselines()
+        physics_window = df.iloc[max(0, idx - 29):idx + 1].copy()
+        physics_scored = physics_anomaly_score(
+            physics_window, physics_models, healthy_stats=physics_healthy_stats
+        )
+        physics_health_score = float(physics_scored["physics_health_score"].iloc[-1])
+    except Exception:
+        physics_health_score = None
+
+    # --- Mission-reliability action (smoothed + hysteresis-gated) ---
+    try:
+        smoother, gate = get_mission_state()
+        smoothed_state = smoother.update(inference)
+        mission_rec = gate.update(
+            rul_estimate_timesteps=smoothed_state["rul_estimate_timesteps"],
+            rul_lower_bound_timesteps=smoothed_state["rul_lower_bound_timesteps"],
+            health_score=smoothed_state["health_score"],
+            fault_type=smoothed_state["predicted_fault"],
+            fault_confidence=smoothed_state["confidence"],
+            mission_remaining_timesteps=max(1, len(df) - idx),
+        )
+    except Exception:
+        mission_rec = None
+
+    # --- Sensor-trust flags ---
+    try:
+        trust_window = df.iloc[max(0, idx - 59):idx + 1].copy()
+        sensor_trust_result = evaluate_sensor_trust(trust_window)
+    except Exception:
+        sensor_trust_result = None
+
 
     # --------------------------------------------------------
     # HERO AREA
@@ -906,6 +967,16 @@ def dashboard():
                 unsafe_allow_html=True,
             )
 
+            # --- Sensor-trust badge (item 19) ---
+            if sensor_trust_result is not None and field in sensor_trust_result.get("untrusted_sensors", []):
+                failed_checks = sensor_trust_result["flags"].get(field, [])
+                checks_str = ", ".join(failed_checks) if failed_checks else "flagged"
+                st.markdown(
+                    f"<div style='text-align:center;color:#ff3f70;font-size:11px;' "
+                    f"title='{checks_str}'>⚠ untrusted</div>",
+                    unsafe_allow_html=True,
+                )
+
 
     # --------------------------------------------------------
     # HEALTH + RECOVERY
@@ -1057,7 +1128,7 @@ def dashboard():
 
     st.markdown("---")
 
-    d1, d2, d3 = st.columns(3)
+    d1, d2, d3, d4 = st.columns(4)
 
     with d1:
 
@@ -1133,6 +1204,40 @@ def dashboard():
         )
 
 
+    with d4:
+
+        st.markdown(
+            "### 🔧 Physics Health"
+        )
+
+        if physics_health_score is not None:
+
+            p_color = (
+                "#00e5a8" if physics_health_score >= 90
+                else "#ffad33" if physics_health_score >= 75
+                else "#ff3f70"
+            )
+
+            st.markdown(
+                f"""
+                <div class="big-number" style="color:{p_color};">
+                    {physics_health_score:.1f}%
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            st.caption(
+                "Residual-based, model-independent"
+            )
+
+        else:
+
+            st.caption(
+                "Physics baseline unavailable"
+            )
+
+
     # --------------------------------------------------------
     # FAULT ACTION
     # --------------------------------------------------------
@@ -1141,6 +1246,62 @@ def dashboard():
         f"**Operator Action:** "
         f"{inference['operator_action']}"
     )
+
+
+    # --------------------------------------------------------
+    # MISSION-RELIABILITY RECOMMENDATION (item 19)
+    # --------------------------------------------------------
+
+    st.markdown(
+        "## 🛡️ Mission Reliability Recommendation"
+    )
+
+    if mission_rec is not None:
+
+        action_str = str(
+            mission_rec.action.value
+            if hasattr(mission_rec.action, "value")
+            else mission_rec.action
+        ).upper()
+
+        reasons = mission_rec.reasons or []
+        risk_score = getattr(mission_rec, "risk_score", None)
+
+        if "ABORT" in action_str:
+            banner_class, icon = "danger-card", "🛑"
+        elif "RETURN" in action_str:
+            banner_class, icon = "warning-card", "↩️"
+        elif "REDUCE" in action_str:
+            banner_class, icon = "warning-card", "⚠️"
+        else:
+            banner_class, icon = "live-card", "✅"
+
+        reasons_html = (
+            "<br>".join(f"• {r}" for r in reasons)
+            if reasons else
+            "Nominal — no escalation triggers active."
+        )
+
+        risk_html = (
+            f"<br><b>Risk Score:</b> {risk_score:.0f}"
+            if risk_score is not None else ""
+        )
+
+        st.markdown(
+            f"""
+            <div class="neo-card {banner_class}">
+                <h3>{icon} {action_str}</h3>
+                <div class="small-muted">{reasons_html}{risk_html}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    else:
+
+        st.caption(
+            "Mission-reliability engine unavailable"
+        )
 
 
     # --------------------------------------------------------
