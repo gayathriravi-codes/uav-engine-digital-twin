@@ -28,6 +28,27 @@ Usage from train_rul_ensemble.py's predict_rul_ensemble(calibrated=True):
     from calibrate_rul import apply_calibration, load_calibration_params
     params = load_calibration_params()
     y_cal, lb = apply_calibration(point_estimate, params)
+
+v8 (this session, Aashita): OOD-aware calibration fix. apply_calibration()
+  previously had no way to know whether the point estimate it was given
+  came from an OOD window -- it always built lb purely from a bucket
+  lookup. This was silently bypassing the OOD gate fix made in
+  train_rul_ensemble.py (v7) for any caller that uses calibrated=False +
+  apply_calibration() directly, which is exactly what
+  check_per_bucket_coverage() does (deliberately, to avoid double-
+  calibration -- see its own docstring). Root cause confirmed: re-running
+  run_coverage_check.py after the v7 fix gave byte-identical numbers to
+  before the fix (86.5% on bucket (0,50)), which is only possible if the
+  fix was never exercised by this code path.
+  Fix: apply_calibration() now takes an explicit is_ood=False kwarg. When
+  True, it forces lb=0.0 (maximally conservative) after all normal
+  clamping, same behavior as the v7 fix in predict_rul_ensemble(), just
+  reachable from calibrated=False callers too. check_per_bucket_coverage()
+  now computes is_ood per-window (via compute_ood_zscore_distance, same
+  function/threshold train_rul_ensemble.py uses) and passes it through.
+  predict_rul_ensemble()'s own calibrated=True branch now also delegates
+  to this same is_ood param instead of separately overwriting lb_cal, so
+  there's one single place the OOD-lb-override logic lives.
 """
 import os
 import numpy as np
@@ -157,11 +178,12 @@ def fit_calibration(X_val, y_val, models, scaler, dropped_idx_list,
 
     return params
 
+
 def load_calibration_params(path=CALIBRATION_PATH):
     return joblib.load(path)
 
 
-def apply_calibration(point_estimate, params):
+def apply_calibration(point_estimate, params, is_ood=False):
     """
     Two-pass lookup matching the two-stage fit above:
       pass 1: bucket the raw point estimate using STAGE-0 (rough_buckets,
@@ -170,6 +192,13 @@ def apply_calibration(point_estimate, params):
               fit against corrected-estimate buckets) -- this is the SAME
               bucket assignment rule fit_calibration used to compute the
               final numbers, so no train/inference mismatch.
+
+    is_ood: (v8) if True, forces the returned lb to 0.0 -- maximally
+        conservative -- regardless of what the bucket lookup would have
+        given. This is the SAME override predict_rul_ensemble()'s OOD
+        gate applies, now reachable here too so calibrated=False callers
+        (e.g. check_per_bucket_coverage) that call apply_calibration()
+        directly also get OOD protection instead of silently bypassing it.
 
     Returns (y_cal, lb): lb guaranteed <= y_cal, and >= 0.
     """
@@ -199,7 +228,16 @@ def apply_calibration(point_estimate, params):
     lb = min(lb, y_cal)
     lb = max(lb, 0.0)
 
+    # v8: OOD override -- no bucket-based band width can be trusted for a
+    # window this far from the training distribution (see diagnose_bucket0.py:
+    # 23 test windows with true_rul near 0 but point_est off by 2-6x). Force
+    # maximally conservative lb instead.
+    if is_ood:
+        lb = 0.0
+
     return float(y_cal), float(lb)
+
+
 def check_per_bucket_coverage(X_test, y_test, models, scaler, dropped_idx_list,
                                params, target_coverage=0.9):
     """
@@ -210,9 +248,14 @@ def check_per_bucket_coverage(X_test, y_test, models, scaler, dropped_idx_list,
 
     Also spot-checks: lb <= y_cal always, and lb never negative.
 
+    v8: now also computes each window's OOD flag (same signal
+    predict_rul_ensemble()'s gate uses) and passes it into apply_calibration,
+    so this check actually reflects the v7/v8 OOD protection instead of
+    silently bypassing it via calibrated=False.
+
     Returns dict: {bucket_edges: {"coverage": float, "n": int, "pass": bool}}
     """
-    from train_rul_ensemble import predict_rul_ensemble
+    from train_rul_ensemble import predict_rul_ensemble, compute_ood_zscore_distance
 
     bucket_edges = params["bucket_edges"]
     y_test = np.asarray(y_test, dtype=float)
@@ -238,7 +281,14 @@ def check_per_bucket_coverage(X_test, y_test, models, scaler, dropped_idx_list,
             point_estimate = predict_rul_ensemble(
                 X_test[idx], models, scaler, dropped_idx_list, calibrated=False
             )["point_estimate_timesteps"]
-            y_cal, lb = apply_calibration(point_estimate, params)
+
+            # v8: compute OOD flag directly (same threshold as
+            # predict_rul_ensemble's default: ood_zscore_threshold=2.0),
+            # since calibrated=False above never runs the OOD gate itself.
+            ood_distance = compute_ood_zscore_distance(X_test[idx], scaler)
+            is_ood = ood_distance > 2.0
+
+            y_cal, lb = apply_calibration(point_estimate, params, is_ood=is_ood)
 
             assert lb <= y_cal + 1e-6, "Lower bound exceeded corrected point estimate!"
             assert lb >= 0, "Lower bound went negative!"
@@ -270,12 +320,19 @@ def predict_rul_calibrated(window, models, scaler, dropped_idx_list):
     Local import of predict_rul_ensemble avoids a circular import, since
     train_rul_ensemble.py optionally imports apply_calibration from this
     file when calibrated=True is passed.
+
+    v8: now also computes is_ood and passes it into apply_calibration, so
+    this convenience path gets OOD protection too (previously missing it,
+    same bug as check_per_bucket_coverage).
     """
-    from train_rul_ensemble import predict_rul_ensemble
+    from train_rul_ensemble import predict_rul_ensemble, compute_ood_zscore_distance
 
     raw = predict_rul_ensemble(window, models, scaler, dropped_idx_list, calibrated=False)
+    ood_distance = compute_ood_zscore_distance(window, scaler)
+    is_ood = ood_distance > 2.0
+
     params = load_calibration_params()
-    y_cal, lb = apply_calibration(raw["point_estimate_timesteps"], params)
+    y_cal, lb = apply_calibration(raw["point_estimate_timesteps"], params, is_ood=is_ood)
 
     return {
         "point_estimate_timesteps": y_cal,
