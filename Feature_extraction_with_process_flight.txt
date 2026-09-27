@@ -1,0 +1,93 @@
+import numpy as np
+import pandas as pd
+from schema import SENSOR_FIELDS, WINDOW_SIZE, STRIDE, HEALTHY_RANGES
+
+SENSOR_WEIGHTS = {
+    "rpm": 0.10, "egt": 0.20, "cht": 0.15, "oil_pressure": 0.15,
+    "oil_temp": 0.10, "vibration": 0.15, "fuel_flow": 0.15,
+}
+
+
+def sensor_health(value, lower, upper):
+    range_width = upper - lower
+    if lower <= value <= upper:
+        return 1.0
+    if value < lower:
+        score = 1 - (lower - value) / range_width
+    else:
+        score = 1 - (value - upper) / range_width
+    return np.clip(score, 0.0, 1.0)
+
+
+def calculate_health_score(df):
+    scores = []
+    for _, row in df.iterrows():
+        weighted_score = 0.0
+        worst_sensor_score = 1.0
+        for sensor in SENSOR_FIELDS:
+            lower, upper = HEALTHY_RANGES[sensor]
+            h = sensor_health(row[sensor], lower, upper)
+            weighted_score += SENSOR_WEIGHTS[sensor] * h
+            worst_sensor_score = min(worst_sensor_score, h)
+        blended = 0.6 * weighted_score + 0.4 * worst_sensor_score
+        scores.append(100 * blended)
+    return pd.Series(scores, index=df.index)
+
+
+def calculate_slope(values):
+    if len(values) < 2:
+        return 0.0
+    x = np.arange(len(values))
+    return np.polyfit(x, values, 1)[0]
+
+
+def extract_window_features(window):
+    features = {}
+    for sensor in SENSOR_FIELDS:
+        values = window[sensor].astype(float).values
+        features[f"{sensor}_mean"] = np.mean(values)
+        features[f"{sensor}_std"] = np.std(values)
+        features[f"{sensor}_min"] = np.min(values)
+        features[f"{sensor}_max"] = np.max(values)
+        features[f"{sensor}_range"] = np.max(values) - np.min(values)
+        features[f"{sensor}_delta"] = values[-1] - values[0]
+        features[f"{sensor}_slope"] = calculate_slope(values)
+        lower, upper = HEALTHY_RANGES[sensor]
+        features[f"{sensor}_abnormal_count"] = int(np.sum((values < lower) | (values > upper)))
+
+    health_scores = calculate_health_score(window)
+    features["health_score_mean"] = health_scores.mean()
+    features["health_score_std"] = health_scores.std()
+    features["health_score_min"] = health_scores.min()
+    features["health_score_delta"] = health_scores.iloc[-1] - health_scores.iloc[0]
+    features["health_score_slope"] = calculate_slope(health_scores.values)
+    return features
+
+
+def get_window_label(window):
+    counts = window["fault_type"].value_counts()
+    misfire_count = counts.get("misfire", 0)
+    if misfire_count >= 5:
+        return "misfire"
+    return counts.idxmax()
+
+
+def process_flight_df(df, flight_id_override=None):
+    """
+    In-memory variant of process_flight() -- takes an already-loaded,
+    already-sorted-by-timestamp flight DataFrame instead of a filepath, so
+    the mismatch sweep can feed it generated flights directly without
+    writing/reading CSVs. Logic is otherwise identical to process_flight().
+    """
+    df = df.sort_values("timestamp").reset_index(drop=True)
+    rows = []
+    for start in range(0, len(df) - WINDOW_SIZE + 1, STRIDE):
+        end = start + WINDOW_SIZE
+        window = df.iloc[start:end]
+        features = extract_window_features(window)
+        features["label"] = get_window_label(window)
+        features["flight_id"] = flight_id_override or df["flight_id"].iloc[0]
+        features["window_start"] = start
+        features["window_end"] = end - 1
+        rows.append(features)
+    return pd.DataFrame(rows)

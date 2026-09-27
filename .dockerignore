@@ -1,0 +1,12 @@
+.venv
+venv
+__pycache__
+*.pyc
+.git
+.gitignore
+.pytest_cache
+*.egg-info
+
+# NOTE: do NOT add the model artifacts here (rul_model_variant_*.pt, *.joblib) —
+# they're gitignored for git but must stay INCLUDED in the Docker build context,
+# otherwise the dashboard container will be missing the trained models.

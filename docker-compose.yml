@@ -1,0 +1,15 @@
+services:
+  dashboard:
+    build: .
+    ports:
+      - "8501:8501"
+    volumes:
+      # Mount data/raw so any new mission-scenario CSVs you generate later
+      # (generate_mission_scenarios.py etc.) show up in the dashboard's flight
+      # picker without rebuilding the image.
+      - ./data/raw:/app/data/raw
+    # Uncomment if you want live code edits to reflect without a rebuild
+    # (slower on Windows/OneDrive-synced folders — test before demo day):
+    # volumes:
+    #   - .:/app
+    #   - ./data/raw:/app/data/raw

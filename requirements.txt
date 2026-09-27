@@ -9,3 +9,8 @@ joblib
 streamlit
 torch
 xgboost
+
+# Optional extras — not needed for the core dashboard, but required if a judge
+# asks to see the SHAP explainability output or the leakage regression suite live.
+shap
+pytest
