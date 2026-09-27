@@ -131,7 +131,7 @@ def fit_calibration(X_val, y_val, models, scaler, dropped_idx_list,
     # (87.1% vs target 90%) at the global CONFORMAL_QUANTILE, so it gets
     # a higher quantile -> wider band, while other buckets keep the
     # global default. See fix_bucket0_conformal.py for the numbers.
-    BUCKET_QUANTILE_OVERRIDES = {0: 0.94}
+    BUCKET_QUANTILE_OVERRIDES = {0: 0.97}
     for b, edges in enumerate(bucket_edges):
         mask = corrected_bucket_ids == b
         n = int(mask.sum())

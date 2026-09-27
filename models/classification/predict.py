@@ -139,11 +139,25 @@ def determine_fault_severity(fault):
 # ============================================================
 # LOAD MODEL
 # ============================================================
+_cached_model = None
+
 
 def load_model():
     """
     Load the trained XGBoost fault-classification model.
+
+    Cached at module level after the first load, since reloading a
+    4.4MB JSON model file from disk on every predict_fault() call was
+    adding ~400ms of pure I/O/parsing overhead per inference cycle -
+    found via inference_benchmark.py, which showed the classifier at
+    ~400ms/call vs the RUL ensemble's ~5ms/call despite comparable
+    underlying model complexity.
     """
+
+    global _cached_model
+
+    if _cached_model is not None:
+        return _cached_model
 
     if not MODEL_PATH.exists():
         raise FileNotFoundError(
@@ -153,9 +167,9 @@ def load_model():
     model = xgb.XGBClassifier()
     model.load_model(str(MODEL_PATH))
 
+    _cached_model = model
+
     return model
-
-
 # ============================================================
 # CONVERT EXTRACTED FEATURES TO DATAFRAME
 # ============================================================
