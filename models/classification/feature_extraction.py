@@ -305,3 +305,23 @@ if __name__ == "__main__":
 
     print("\nFeature columns:")
     print(dataset.columns.tolist())
+
+def process_flight_df(df, flight_id_override=None):
+    """
+    In-memory variant of process_flight() -- takes an already-loaded,
+    already-sorted-by-timestamp flight DataFrame instead of a filepath, so
+    the mismatch sweep can feed it generated flights directly without
+    writing/reading CSVs. Logic is otherwise identical to process_flight().
+    """
+    df = df.sort_values("timestamp").reset_index(drop=True)
+    rows = []
+    for start in range(0, len(df) - WINDOW_SIZE + 1, STRIDE):
+        end = start + WINDOW_SIZE
+        window = df.iloc[start:end]
+        features = extract_window_features(window)
+        features["label"] = get_window_label(window)
+        features["flight_id"] = flight_id_override or df["flight_id"].iloc[0]
+        features["window_start"] = start
+        features["window_end"] = end - 1
+        rows.append(features)
+    return pd.DataFrame(rows)
