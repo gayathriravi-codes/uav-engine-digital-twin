@@ -1,0 +1,40 @@
+fault,severity,noise,n,detected,failed,rate
+healthy (false alarm),-,0.0,30,1,0,0.03
+healthy (false alarm),-,0.02,30,4,0,0.13
+healthy (false alarm),-,0.05,30,0,0,0.0
+misfire,0.0,0.0,30,13,0,0.43
+misfire,0.0,0.02,30,15,0,0.5
+misfire,0.0,0.05,30,13,0,0.43
+misfire,0.1,0.0,30,23,0,0.77
+misfire,0.1,0.02,30,23,0,0.77
+misfire,0.1,0.05,30,23,0,0.77
+overheat,0.0,0.0,30,25,0,0.83
+overheat,0.0,0.02,30,22,0,0.73
+overheat,0.0,0.05,30,1,0,0.03
+overheat,0.1,0.0,30,29,0,0.97
+overheat,0.1,0.02,30,27,0,0.9
+overheat,0.1,0.05,30,9,0,0.3
+cooling_degradation,0.0,0.0,30,25,0,0.83
+cooling_degradation,0.0,0.02,30,22,0,0.73
+cooling_degradation,0.0,0.05,30,1,0,0.03
+cooling_degradation,0.1,0.0,30,30,0,1.0
+cooling_degradation,0.1,0.02,30,30,0,1.0
+cooling_degradation,0.1,0.05,30,11,0,0.37
+oil_issue,0.0,0.0,30,26,0,0.87
+oil_issue,0.0,0.02,30,12,0,0.4
+oil_issue,0.0,0.05,30,1,0,0.03
+oil_issue,0.1,0.0,30,28,0,0.93
+oil_issue,0.1,0.02,30,27,0,0.9
+oil_issue,0.1,0.05,30,14,0,0.47
+sensor_drift,0.0,0.0,30,7,0,0.23
+sensor_drift,0.0,0.02,30,7,0,0.23
+sensor_drift,0.0,0.05,30,5,0,0.17
+sensor_drift,0.1,0.0,30,9,0,0.3
+sensor_drift,0.1,0.02,30,8,0,0.27
+sensor_drift,0.1,0.05,30,8,0,0.27
+vibration_fault,0.0,0.0,30,30,0,1.0
+vibration_fault,0.0,0.02,30,30,0,1.0
+vibration_fault,0.0,0.05,30,23,0,0.77
+vibration_fault,0.1,0.0,30,30,0,1.0
+vibration_fault,0.1,0.02,30,30,0,1.0
+vibration_fault,0.1,0.05,30,29,0,0.97
