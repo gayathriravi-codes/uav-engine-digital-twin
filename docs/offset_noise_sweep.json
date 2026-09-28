@@ -1,0 +1,282 @@
+[
+  {
+    "mode": "calibration_offset",
+    "level": 0.0,
+    "build_id": 42,
+    "macro_f1": 0.8814336487710313,
+    "false_alarm_rate": 0.010040160642570281
+  },
+  {
+    "mode": "calibration_offset",
+    "level": 0.0,
+    "build_id": 43,
+    "macro_f1": 0.8891532715070826,
+    "false_alarm_rate": 0.04580152671755725
+  },
+  {
+    "mode": "calibration_offset",
+    "level": 0.0,
+    "build_id": 44,
+    "macro_f1": 0.894633262519773,
+    "false_alarm_rate": 0.02403846153846154
+  },
+  {
+    "mode": "calibration_offset",
+    "level": 0.0,
+    "build_id": 45,
+    "macro_f1": 0.8925037411136552,
+    "false_alarm_rate": 0.07677902621722846
+  },
+  {
+    "mode": "calibration_offset",
+    "level": 0.02,
+    "build_id": 42,
+    "macro_f1": 0.868172363224371,
+    "false_alarm_rate": 0.010040160642570281
+  },
+  {
+    "mode": "calibration_offset",
+    "level": 0.02,
+    "build_id": 43,
+    "macro_f1": 0.8863322083309144,
+    "false_alarm_rate": 0.04770992366412214
+  },
+  {
+    "mode": "calibration_offset",
+    "level": 0.02,
+    "build_id": 44,
+    "macro_f1": 0.8874540088449384,
+    "false_alarm_rate": 0.038461538461538464
+  },
+  {
+    "mode": "calibration_offset",
+    "level": 0.02,
+    "build_id": 45,
+    "macro_f1": 0.8826280199936768,
+    "false_alarm_rate": 0.09550561797752809
+  },
+  {
+    "mode": "calibration_offset",
+    "level": 0.05,
+    "build_id": 42,
+    "macro_f1": 0.8141697861652268,
+    "false_alarm_rate": 0.008032128514056224
+  },
+  {
+    "mode": "calibration_offset",
+    "level": 0.05,
+    "build_id": 43,
+    "macro_f1": 0.8870859550449609,
+    "false_alarm_rate": 0.04198473282442748
+  },
+  {
+    "mode": "calibration_offset",
+    "level": 0.05,
+    "build_id": 44,
+    "macro_f1": 0.8909452244706696,
+    "false_alarm_rate": 0.019230769230769232
+  },
+  {
+    "mode": "calibration_offset",
+    "level": 0.05,
+    "build_id": 45,
+    "macro_f1": 0.8103156883712597,
+    "false_alarm_rate": 0.2340823970037453
+  },
+  {
+    "mode": "calibration_offset",
+    "level": 0.1,
+    "build_id": 42,
+    "macro_f1": 0.6947785547684228,
+    "false_alarm_rate": 0.008032128514056224
+  },
+  {
+    "mode": "calibration_offset",
+    "level": 0.1,
+    "build_id": 43,
+    "macro_f1": 0.7812992339331355,
+    "false_alarm_rate": 0.32061068702290074
+  },
+  {
+    "mode": "calibration_offset",
+    "level": 0.1,
+    "build_id": 44,
+    "macro_f1": 0.8718233294567378,
+    "false_alarm_rate": 0.02403846153846154
+  },
+  {
+    "mode": "calibration_offset",
+    "level": 0.1,
+    "build_id": 45,
+    "macro_f1": 0.7452060689602218,
+    "false_alarm_rate": 0.46629213483146065
+  },
+  {
+    "mode": "calibration_offset",
+    "level": 0.2,
+    "build_id": 42,
+    "macro_f1": 0.5864242925504836,
+    "false_alarm_rate": 0.0
+  },
+  {
+    "mode": "calibration_offset",
+    "level": 0.2,
+    "build_id": 43,
+    "macro_f1": 0.5776454682832152,
+    "false_alarm_rate": 0.8759541984732825
+  },
+  {
+    "mode": "calibration_offset",
+    "level": 0.2,
+    "build_id": 44,
+    "macro_f1": 0.8369072142898338,
+    "false_alarm_rate": 0.009615384615384616
+  },
+  {
+    "mode": "calibration_offset",
+    "level": 0.2,
+    "build_id": 45,
+    "macro_f1": 0.6723020792655715,
+    "false_alarm_rate": 0.8408239700374532
+  },
+  {
+    "mode": "extra_noise",
+    "level": 0.0,
+    "build_id": 42,
+    "macro_f1": 0.8814336487710313,
+    "false_alarm_rate": 0.010040160642570281
+  },
+  {
+    "mode": "extra_noise",
+    "level": 0.0,
+    "build_id": 43,
+    "macro_f1": 0.8891532715070826,
+    "false_alarm_rate": 0.04580152671755725
+  },
+  {
+    "mode": "extra_noise",
+    "level": 0.0,
+    "build_id": 44,
+    "macro_f1": 0.894633262519773,
+    "false_alarm_rate": 0.02403846153846154
+  },
+  {
+    "mode": "extra_noise",
+    "level": 0.0,
+    "build_id": 45,
+    "macro_f1": 0.8925037411136552,
+    "false_alarm_rate": 0.07677902621722846
+  },
+  {
+    "mode": "extra_noise",
+    "level": 0.02,
+    "build_id": 42,
+    "macro_f1": 0.8518383458171043,
+    "false_alarm_rate": 0.08433734939759036
+  },
+  {
+    "mode": "extra_noise",
+    "level": 0.02,
+    "build_id": 43,
+    "macro_f1": 0.872717119664254,
+    "false_alarm_rate": 0.0916030534351145
+  },
+  {
+    "mode": "extra_noise",
+    "level": 0.02,
+    "build_id": 44,
+    "macro_f1": 0.8668142584340152,
+    "false_alarm_rate": 0.09375
+  },
+  {
+    "mode": "extra_noise",
+    "level": 0.02,
+    "build_id": 45,
+    "macro_f1": 0.8391125037829024,
+    "false_alarm_rate": 0.12359550561797752
+  },
+  {
+    "mode": "extra_noise",
+    "level": 0.05,
+    "build_id": 42,
+    "macro_f1": 0.5442915932520539,
+    "false_alarm_rate": 0.6044176706827309
+  },
+  {
+    "mode": "extra_noise",
+    "level": 0.05,
+    "build_id": 43,
+    "macro_f1": 0.5979327239856911,
+    "false_alarm_rate": 0.5095419847328244
+  },
+  {
+    "mode": "extra_noise",
+    "level": 0.05,
+    "build_id": 44,
+    "macro_f1": 0.5813450310834203,
+    "false_alarm_rate": 0.6201923076923077
+  },
+  {
+    "mode": "extra_noise",
+    "level": 0.05,
+    "build_id": 45,
+    "macro_f1": 0.44442497592976915,
+    "false_alarm_rate": 0.550561797752809
+  },
+  {
+    "mode": "extra_noise",
+    "level": 0.1,
+    "build_id": 42,
+    "macro_f1": 0.34190901796322365,
+    "false_alarm_rate": 0.5622489959839357
+  },
+  {
+    "mode": "extra_noise",
+    "level": 0.1,
+    "build_id": 43,
+    "macro_f1": 0.43021532074707114,
+    "false_alarm_rate": 0.5286259541984732
+  },
+  {
+    "mode": "extra_noise",
+    "level": 0.1,
+    "build_id": 44,
+    "macro_f1": 0.38814967138265216,
+    "false_alarm_rate": 0.4951923076923077
+  },
+  {
+    "mode": "extra_noise",
+    "level": 0.1,
+    "build_id": 45,
+    "macro_f1": 0.2984483905327346,
+    "false_alarm_rate": 0.5224719101123596
+  },
+  {
+    "mode": "extra_noise",
+    "level": 0.2,
+    "build_id": 42,
+    "macro_f1": 0.1569511049390661,
+    "false_alarm_rate": 0.8694779116465864
+  },
+  {
+    "mode": "extra_noise",
+    "level": 0.2,
+    "build_id": 43,
+    "macro_f1": 0.14784038686298343,
+    "false_alarm_rate": 0.8492366412213741
+  },
+  {
+    "mode": "extra_noise",
+    "level": 0.2,
+    "build_id": 44,
+    "macro_f1": 0.13359664852472605,
+    "false_alarm_rate": 0.8870192307692307
+  },
+  {
+    "mode": "extra_noise",
+    "level": 0.2,
+    "build_id": 45,
+    "macro_f1": 0.1086170576278026,
+    "false_alarm_rate": 0.8352059925093633
+  }
+]

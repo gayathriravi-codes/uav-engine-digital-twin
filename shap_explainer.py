@@ -31,7 +31,7 @@ from xgboost import XGBClassifier
 PROJECT_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-MODEL_PATH = PROJECT_ROOT / "models" / "classification" / "xgboost_fault_classifier_fixed.json"
+MODEL_PATH = PROJECT_ROOT / "models" / "classification" / "xgboost_fault_classifier_aug.json"
 DATA_PATH = PROJECT_ROOT / "data" / "processed" / "classification_features.csv"
 
 DROP_COLUMNS = ["label", "flight_id", "window_start", "window_end"]

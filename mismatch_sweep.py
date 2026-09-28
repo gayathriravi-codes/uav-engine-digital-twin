@@ -183,7 +183,7 @@ def evaluate_model(model: XGBClassifier, feature_rows: pd.DataFrame) -> Dict[str
 # ---------------------------------------------------------------------------
 
 def run_mismatch_sweep(
-    model_path: str = "models/classification/xgboost_fault_classifier.json",
+    model_path: str = "models/classification/xgboost_fault_classifier_aug.json",
     spread_levels_pct=(0.0, 0.02, 0.05, 0.08, 0.10, 0.15),
     n_units_per_level: int = 6,
     n_healthy_per_unit: int = 5,

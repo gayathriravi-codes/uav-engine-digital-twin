@@ -33,7 +33,7 @@ MODEL_PATH = (
     PROJECT_ROOT
     / "models"
     / "classification"
-    / "xgboost_fault_classifier.json"
+    / "xgboost_fault_classifier_aug.json"
 )
 
 

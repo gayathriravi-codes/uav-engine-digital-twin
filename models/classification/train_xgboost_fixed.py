@@ -57,10 +57,34 @@ print(f"Loaded dataset: {df.shape}")
 # same leakage bug class the RUL team found and fixed in train_rul_ensemble.py,
 # just one layer down. This mirrors that fix: group on the base trajectory
 # ID instead of the fault-labeled name.
-df["base_id"] = df["flight_id"].str.rsplit("_", n=1).str[-1]
+#
+# FIX (this version): the naive "text after the last underscore" rule only
+# works for the 18 original relabeled trajectories (e.g. misfire_005 ->
+# "005"), because their trailing token is numeric. It breaks for the newer
+# mission_*.csv scenario flights (e.g. mission_endurance_healthy ->
+# "healthy", mission_high_altitude_overheat -> "overheat"), which are NOT
+# relabeled copies of a shared base trajectory -- each mission scenario is
+# its own independently generated flight. Worse, the naive rule could
+# collide unrelated mission flights that happen to share a trailing word
+# (e.g. every "..._healthy" mission file grouped together as base_id
+# "healthy"). Fix: only use the numeric-suffix rule when the suffix is
+# actually numeric; otherwise treat the flight as its own singleton group.
+def _compute_base_id(flight_id: str) -> str:
+    suffix = flight_id.rsplit("_", 1)[-1]
+    if suffix.isdigit():
+        # one of the 18 relabeled base trajectories (e.g. misfire_005 -> "005")
+        return suffix
+    # mission_*.csv scenario flights aren't relabeled copies of a base
+    # trajectory -- treat each as its own independent group so it can't
+    # collide with unrelated mission flights that happen to share a
+    # trailing word (e.g. "..._healthy", "..._overheat")
+    return flight_id
+
+
+df["base_id"] = df["flight_id"].apply(_compute_base_id)
 
 print(f"\nBase trajectories: {df['base_id'].nunique()} "
-      f"(expect 18: 000-017)")
+      f"(expect 18 real + 1 singleton per mission scenario file)")
 print(df.groupby("base_id")["flight_id"].nunique().to_string())
 
 

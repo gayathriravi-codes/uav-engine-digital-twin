@@ -1,0 +1,56 @@
+[
+  {
+    "spread_pct": 0.0,
+    "build_id": 42,
+    "macro_f1": 0.8814336487710313,
+    "false_alarm_rate": 0.010040160642570281
+  },
+  {
+    "spread_pct": 0.0,
+    "build_id": 43,
+    "macro_f1": 0.8891532715070826,
+    "false_alarm_rate": 0.04580152671755725
+  },
+  {
+    "spread_pct": 0.0,
+    "build_id": 44,
+    "macro_f1": 0.894633262519773,
+    "false_alarm_rate": 0.02403846153846154
+  },
+  {
+    "spread_pct": 0.3,
+    "build_id": 42,
+    "macro_f1": 0.8853061478604646,
+    "false_alarm_rate": 0.010040160642570281
+  },
+  {
+    "spread_pct": 0.3,
+    "build_id": 43,
+    "macro_f1": 0.8881166779437077,
+    "false_alarm_rate": 0.04580152671755725
+  },
+  {
+    "spread_pct": 0.3,
+    "build_id": 44,
+    "macro_f1": 0.8953376359557348,
+    "false_alarm_rate": 0.021634615384615384
+  },
+  {
+    "spread_pct": 0.4,
+    "build_id": 42,
+    "macro_f1": 0.8811359489014444,
+    "false_alarm_rate": 0.010040160642570281
+  },
+  {
+    "spread_pct": 0.4,
+    "build_id": 43,
+    "macro_f1": 0.8893638216553255,
+    "false_alarm_rate": 0.04770992366412214
+  },
+  {
+    "spread_pct": 0.4,
+    "build_id": 44,
+    "macro_f1": 0.8909684875205109,
+    "false_alarm_rate": 0.021634615384615384
+  }
+]
