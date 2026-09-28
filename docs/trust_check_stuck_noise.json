@@ -1,0 +1,34 @@
+[
+  {
+    "noise": 0.02,
+    "target": "oil_pressure",
+    "n": 30,
+    "detected": 30,
+    "rate": 1.0,
+    "median_delay": 39.0
+  },
+  {
+    "noise": 0.02,
+    "target": "vibration",
+    "n": 30,
+    "detected": 30,
+    "rate": 1.0,
+    "median_delay": 39.0
+  },
+  {
+    "noise": 0.05,
+    "target": "oil_pressure",
+    "n": 30,
+    "detected": 30,
+    "rate": 1.0,
+    "median_delay": 39.0
+  },
+  {
+    "noise": 0.05,
+    "target": "vibration",
+    "n": 30,
+    "detected": 30,
+    "rate": 1.0,
+    "median_delay": 39.0
+  }
+]

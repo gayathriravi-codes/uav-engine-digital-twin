@@ -1,0 +1,43 @@
+[
+  {
+    "noise": 0.0,
+    "flights": 300,
+    "alarm_flights": 49,
+    "flight_rate": 0.16333333333333333,
+    "ci95_low": 0.12334431516706465,
+    "ci95_high": 0.21012027379924464,
+    "windows": 16500,
+    "alarm_windows": 1865,
+    "window_rate": 0.11303030303030304,
+    "checks_at_alarm": {
+      "rpm:sustained_mean_shift": 49,
+      "egt:sustained_mean_shift": 1
+    }
+  },
+  {
+    "noise": 0.02,
+    "flights": 300,
+    "alarm_flights": 2,
+    "flight_rate": 0.006666666666666667,
+    "ci95_low": 0.0008083864127997918,
+    "ci95_high": 0.02387349757217365,
+    "windows": 16500,
+    "alarm_windows": 242,
+    "window_rate": 0.014666666666666666,
+    "checks_at_alarm": {
+      "rpm:sustained_mean_shift": 2
+    }
+  },
+  {
+    "noise": 0.05,
+    "flights": 300,
+    "alarm_flights": 0,
+    "flight_rate": 0.0,
+    "ci95_low": 0.0,
+    "ci95_high": 0.012220974694293552,
+    "windows": 16500,
+    "alarm_windows": 4,
+    "window_rate": 0.00024242424242424242,
+    "checks_at_alarm": {}
+  }
+]

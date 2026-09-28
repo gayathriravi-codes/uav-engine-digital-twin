@@ -1,0 +1,48 @@
+[
+  {
+    "noise": 0.0,
+    "flights": 300,
+    "alarm_flights": 9,
+    "flight_rate": 0.03,
+    "ci95_low": 0.013807819555525978,
+    "ci95_high": 0.056183548241615776,
+    "windows": 16500,
+    "alarm_windows": 201,
+    "window_rate": 0.012181818181818183,
+    "alarm_class_counts": {
+      "oil_issue": 1,
+      "sensor_drift": 2,
+      "vibration_fault": 5,
+      "cooling_degradation": 1
+    }
+  },
+  {
+    "noise": 0.02,
+    "flights": 300,
+    "alarm_flights": 20,
+    "flight_rate": 0.06666666666666667,
+    "ci95_low": 0.0411940162138987,
+    "ci95_high": 0.10108564521140825,
+    "windows": 16500,
+    "alarm_windows": 269,
+    "window_rate": 0.016303030303030302,
+    "alarm_class_counts": {
+      "vibration_fault": 12,
+      "overheat": 3,
+      "cooling_degradation": 3,
+      "oil_issue": 2
+    }
+  },
+  {
+    "noise": 0.05,
+    "flights": 300,
+    "alarm_flights": 0,
+    "flight_rate": 0.0,
+    "ci95_low": 0.0,
+    "ci95_high": 0.012220974694293552,
+    "windows": 16500,
+    "alarm_windows": 99,
+    "window_rate": 0.006,
+    "alarm_class_counts": {}
+  }
+]
