@@ -16,6 +16,7 @@ from mission_reliability import recommend_mission_action
 from mission_smoothing import MissionSmoother
 from mission_hysteresis import HysteresisGate
 from sensor_trust import evaluate_sensor_trust
+from human_override import annotate_recommendation, requires_operator_confirmation
 
 
 # ============================================================
@@ -52,6 +53,11 @@ REQUIRED_COLUMNS = [
 ]
 
 SLOW_RECOVERY_THRESHOLD = 0.10
+
+# Actions treated as high-stakes for the human-override confirmation gate.
+# Kept as plain uppercase strings so this comparison is robust to however
+# mission_reliability.MissionAction's .value happens to be cased.
+HIGH_STAKES_ACTION_NAMES = {"ABORT", "RETURN_TO_BASE"}
 
 
 # ============================================================
@@ -230,6 +236,11 @@ defaults = {
     "selected_flight": None,
     "speed": 5,
     "timeline_slider": WINDOW_SIZE - 1,
+    # Set of telemetry-sample indices where the operator has explicitly
+    # confirmed a held-for-confirmation high-stakes recommendation. Keyed
+    # by sample index (not flight) so switching flights below correctly
+    # forgets old confirmations (see the flight-change handler).
+    "confirmed_indices": set(),
 }
 
 for key, value in defaults.items():
@@ -634,6 +645,10 @@ if st.session_state.selected_flight != selected:
     st.session_state.current_index = WINDOW_SIZE - 1
     st.session_state.timeline_slider = WINDOW_SIZE - 1
     st.session_state.playing = False
+    # A new flight means any previously confirmed indices belonged to a
+    # different timeline - forget them so a stale confirmation from one
+    # flight can't silently auto-clear a high-stakes prompt on another.
+    st.session_state.confirmed_indices = set()
 
 
 flight_path = RAW_DIR / selected
@@ -675,6 +690,7 @@ if st.sidebar.button(
     st.session_state.current_index = WINDOW_SIZE - 1
     st.session_state.timeline_slider = WINDOW_SIZE - 1
     st.session_state.playing = False
+    st.session_state.confirmed_indices = set()
     st.rerun()
 
 
@@ -809,6 +825,56 @@ def dashboard():
         sensor_trust_result = evaluate_sensor_trust(trust_window)
     except Exception:
         sensor_trust_result = None
+
+    # --------------------------------------------------------
+    # HUMAN-OVERRIDE CHECK
+    # --------------------------------------------------------
+    # Decide whether the current mission recommendation must be held for
+    # operator confirmation before it's treated as final, rather than
+    # rendered and auto-executed silently. Two independent triggers:
+    #
+    #   1. human_override.annotate_recommendation() - the model's own
+    #      stated fault_confidence is below the auto-execution threshold
+    #      for a high-stakes action (see human_override.py's docstring
+    #      for why ABORT/RETURN_TO_BASE get this treatment and
+    #      CONTINUE/REDUCE_LOAD don't).
+    #
+    #   2. A sensor feeding that classification is flagged untrusted by
+    #      sensor_trust.py. This is NOT in human_override.py itself -
+    #      it's an escalation specific to this dashboard, because a
+    #      high fault_confidence figure is only as trustworthy as the
+    #      sensor readings it was computed from. If a sensor behind the
+    #      current window is untrusted, a high-stakes action should not
+    #      auto-execute purely because the reported confidence number
+    #      looks fine.
+    override_needed = False
+    override_note = None
+
+    if mission_rec is not None:
+        fault_confidence = float(inference.get("confidence", 1.0))
+        override_needed, override_note = annotate_recommendation(
+            mission_rec, fault_confidence
+        )
+
+        action_name = str(
+            mission_rec.action.value
+            if hasattr(mission_rec.action, "value")
+            else mission_rec.action
+        ).upper()
+
+        if (
+            not override_needed
+            and sensor_trust_result is not None
+            and sensor_trust_result["any_untrusted"]
+            and action_name in HIGH_STAKES_ACTION_NAMES
+        ):
+            override_needed = True
+            override_note = (
+                f"{action_name} recommended, but sensor(s) "
+                f"{', '.join(sensor_trust_result['untrusted_sensors'])} are flagged "
+                f"untrusted - confidence in this recommendation cannot be verified. "
+                f"Requires operator confirmation."
+            )
 
 
     # --------------------------------------------------------
@@ -1296,6 +1362,35 @@ def dashboard():
             """,
             unsafe_allow_html=True,
         )
+
+        # --- Human-override confirmation gate ---
+        # A high-stakes recommendation (ABORT / RETURN_TO_BASE) that either
+        # (a) rests on a fault_confidence below human_override.py's
+        # threshold, or (b) rests on a sensor currently flagged untrusted,
+        # is held here rather than presented as final. The operator must
+        # explicitly confirm before it's treated as executed. Confirmation
+        # is remembered per telemetry sample index, so scrubbing the
+        # timeline to a different moment re-asks rather than silently
+        # carrying forward an old confirmation.
+        if override_needed and idx not in st.session_state.confirmed_indices:
+
+            st.markdown(
+                f"""
+                <div class="neo-card warning-card">
+                    <b>⏸ AWAITING OPERATOR CONFIRMATION</b><br>
+                    <span class="small-muted">{override_note}</span>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            if st.button("✅ Confirm and execute", key=f"confirm_{idx}"):
+                st.session_state.confirmed_indices.add(idx)
+                st.rerun()
+
+        elif override_needed and idx in st.session_state.confirmed_indices:
+
+            st.success("✅ Operator confirmed — action executed.")
 
     else:
 
