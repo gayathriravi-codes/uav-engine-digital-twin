@@ -2,15 +2,28 @@
   {
     "sub_type": "bias",
     "target": "oil_pressure",
-    "severity": 0.1,
+    "severity": 0.0,
     "n": 30,
     "detected_target": 0,
-    "detected_any": 3,
+    "detected_any": 0,
     "failed": 0,
     "median_delay": null,
     "checks": "{}",
     "rate_target": 0.0,
-    "rate_any": 0.1
+    "rate_any": 0.0
+  },
+  {
+    "sub_type": "bias",
+    "target": "oil_pressure",
+    "severity": 0.1,
+    "n": 30,
+    "detected_target": 0,
+    "detected_any": 0,
+    "failed": 0,
+    "median_delay": null,
+    "checks": "{}",
+    "rate_target": 0.0,
+    "rate_any": 0.0
   },
   {
     "sub_type": "bias",
@@ -18,12 +31,12 @@
     "severity": 0.2,
     "n": 30,
     "detected_target": 0,
-    "detected_any": 3,
+    "detected_any": 0,
     "failed": 0,
     "median_delay": null,
     "checks": "{}",
     "rate_target": 0.0,
-    "rate_any": 0.1
+    "rate_any": 0.0
   },
   {
     "sub_type": "bias",
@@ -31,12 +44,12 @@
     "severity": 0.35,
     "n": 30,
     "detected_target": 0,
-    "detected_any": 3,
+    "detected_any": 0,
     "failed": 0,
     "median_delay": null,
     "checks": "{}",
     "rate_target": 0.0,
-    "rate_any": 0.1
+    "rate_any": 0.0
   },
   {
     "sub_type": "bias",
@@ -44,12 +57,12 @@
     "severity": 0.5,
     "n": 30,
     "detected_target": 0,
-    "detected_any": 3,
+    "detected_any": 0,
     "failed": 0,
     "median_delay": null,
     "checks": "{}",
     "rate_target": 0.0,
-    "rate_any": 0.1
+    "rate_any": 0.0
   },
   {
     "sub_type": "bias",
@@ -57,12 +70,12 @@
     "severity": 0.75,
     "n": 30,
     "detected_target": 0,
-    "detected_any": 3,
+    "detected_any": 0,
     "failed": 0,
     "median_delay": null,
     "checks": "{}",
     "rate_target": 0.0,
-    "rate_any": 0.1
+    "rate_any": 0.0
   },
   {
     "sub_type": "bias",
@@ -70,12 +83,25 @@
     "severity": 1.0,
     "n": 30,
     "detected_target": 7,
-    "detected_any": 9,
+    "detected_any": 7,
     "failed": 0,
     "median_delay": 14.0,
     "checks": "{\"impossible_rate_of_change\": 7}",
     "rate_target": 0.2333333333,
-    "rate_any": 0.3
+    "rate_any": 0.2333333333
+  },
+  {
+    "sub_type": "bias",
+    "target": "vibration",
+    "severity": 0.0,
+    "n": 30,
+    "detected_target": 0,
+    "detected_any": 0,
+    "failed": 0,
+    "median_delay": null,
+    "checks": "{}",
+    "rate_target": 0.0,
+    "rate_any": 0.0
   },
   {
     "sub_type": "bias",
@@ -83,12 +109,12 @@
     "severity": 0.1,
     "n": 30,
     "detected_target": 0,
-    "detected_any": 2,
+    "detected_any": 0,
     "failed": 0,
     "median_delay": null,
     "checks": "{}",
     "rate_target": 0.0,
-    "rate_any": 0.0666666667
+    "rate_any": 0.0
   },
   {
     "sub_type": "bias",
@@ -96,12 +122,12 @@
     "severity": 0.2,
     "n": 30,
     "detected_target": 0,
-    "detected_any": 2,
+    "detected_any": 0,
     "failed": 0,
     "median_delay": null,
     "checks": "{}",
     "rate_target": 0.0,
-    "rate_any": 0.0666666667
+    "rate_any": 0.0
   },
   {
     "sub_type": "bias",
@@ -109,12 +135,12 @@
     "severity": 0.35,
     "n": 30,
     "detected_target": 0,
-    "detected_any": 2,
+    "detected_any": 0,
     "failed": 0,
     "median_delay": null,
     "checks": "{}",
     "rate_target": 0.0,
-    "rate_any": 0.0666666667
+    "rate_any": 0.0
   },
   {
     "sub_type": "bias",
@@ -122,12 +148,12 @@
     "severity": 0.5,
     "n": 30,
     "detected_target": 0,
-    "detected_any": 2,
+    "detected_any": 0,
     "failed": 0,
     "median_delay": null,
     "checks": "{}",
     "rate_target": 0.0,
-    "rate_any": 0.0666666667
+    "rate_any": 0.0
   },
   {
     "sub_type": "bias",
@@ -135,12 +161,12 @@
     "severity": 0.75,
     "n": 30,
     "detected_target": 0,
-    "detected_any": 2,
+    "detected_any": 0,
     "failed": 0,
     "median_delay": null,
     "checks": "{}",
     "rate_target": 0.0,
-    "rate_any": 0.0666666667
+    "rate_any": 0.0
   },
   {
     "sub_type": "bias",
@@ -148,12 +174,25 @@
     "severity": 1.0,
     "n": 30,
     "detected_target": 0,
-    "detected_any": 3,
+    "detected_any": 0,
     "failed": 0,
     "median_delay": null,
     "checks": "{}",
     "rate_target": 0.0,
-    "rate_any": 0.1
+    "rate_any": 0.0
+  },
+  {
+    "sub_type": "drift",
+    "target": "oil_pressure",
+    "severity": 0.0,
+    "n": 30,
+    "detected_target": 0,
+    "detected_any": 0,
+    "failed": 0,
+    "median_delay": null,
+    "checks": "{}",
+    "rate_target": 0.0,
+    "rate_any": 0.0
   },
   {
     "sub_type": "drift",
@@ -161,12 +200,12 @@
     "severity": 0.1,
     "n": 30,
     "detected_target": 0,
-    "detected_any": 2,
+    "detected_any": 0,
     "failed": 0,
     "median_delay": null,
     "checks": "{}",
     "rate_target": 0.0,
-    "rate_any": 0.0666666667
+    "rate_any": 0.0
   },
   {
     "sub_type": "drift",
@@ -174,12 +213,12 @@
     "severity": 0.2,
     "n": 30,
     "detected_target": 0,
-    "detected_any": 2,
+    "detected_any": 0,
     "failed": 0,
     "median_delay": null,
     "checks": "{}",
     "rate_target": 0.0,
-    "rate_any": 0.0666666667
+    "rate_any": 0.0
   },
   {
     "sub_type": "drift",
@@ -187,12 +226,12 @@
     "severity": 0.35,
     "n": 30,
     "detected_target": 0,
-    "detected_any": 2,
+    "detected_any": 0,
     "failed": 0,
     "median_delay": null,
     "checks": "{}",
     "rate_target": 0.0,
-    "rate_any": 0.0666666667
+    "rate_any": 0.0
   },
   {
     "sub_type": "drift",
@@ -200,12 +239,12 @@
     "severity": 0.5,
     "n": 30,
     "detected_target": 0,
-    "detected_any": 2,
+    "detected_any": 0,
     "failed": 0,
     "median_delay": null,
     "checks": "{}",
     "rate_target": 0.0,
-    "rate_any": 0.0666666667
+    "rate_any": 0.0
   },
   {
     "sub_type": "drift",
@@ -213,12 +252,12 @@
     "severity": 0.75,
     "n": 30,
     "detected_target": 0,
-    "detected_any": 2,
+    "detected_any": 0,
     "failed": 0,
     "median_delay": null,
     "checks": "{}",
     "rate_target": 0.0,
-    "rate_any": 0.0666666667
+    "rate_any": 0.0
   },
   {
     "sub_type": "drift",
@@ -226,12 +265,25 @@
     "severity": 1.0,
     "n": 30,
     "detected_target": 0,
-    "detected_any": 2,
+    "detected_any": 0,
     "failed": 0,
     "median_delay": null,
     "checks": "{}",
     "rate_target": 0.0,
-    "rate_any": 0.0666666667
+    "rate_any": 0.0
+  },
+  {
+    "sub_type": "drift",
+    "target": "vibration",
+    "severity": 0.0,
+    "n": 30,
+    "detected_target": 0,
+    "detected_any": 0,
+    "failed": 0,
+    "median_delay": null,
+    "checks": "{}",
+    "rate_target": 0.0,
+    "rate_any": 0.0
   },
   {
     "sub_type": "drift",
@@ -239,12 +291,12 @@
     "severity": 0.1,
     "n": 30,
     "detected_target": 0,
-    "detected_any": 2,
+    "detected_any": 0,
     "failed": 0,
     "median_delay": null,
     "checks": "{}",
     "rate_target": 0.0,
-    "rate_any": 0.0666666667
+    "rate_any": 0.0
   },
   {
     "sub_type": "drift",
@@ -252,12 +304,12 @@
     "severity": 0.2,
     "n": 30,
     "detected_target": 0,
-    "detected_any": 2,
+    "detected_any": 0,
     "failed": 0,
     "median_delay": null,
     "checks": "{}",
     "rate_target": 0.0,
-    "rate_any": 0.0666666667
+    "rate_any": 0.0
   },
   {
     "sub_type": "drift",
@@ -265,12 +317,12 @@
     "severity": 0.35,
     "n": 30,
     "detected_target": 0,
-    "detected_any": 2,
+    "detected_any": 0,
     "failed": 0,
     "median_delay": null,
     "checks": "{}",
     "rate_target": 0.0,
-    "rate_any": 0.0666666667
+    "rate_any": 0.0
   },
   {
     "sub_type": "drift",
@@ -278,12 +330,12 @@
     "severity": 0.5,
     "n": 30,
     "detected_target": 0,
-    "detected_any": 2,
+    "detected_any": 0,
     "failed": 0,
     "median_delay": null,
     "checks": "{}",
     "rate_target": 0.0,
-    "rate_any": 0.0666666667
+    "rate_any": 0.0
   },
   {
     "sub_type": "drift",
@@ -291,12 +343,12 @@
     "severity": 0.75,
     "n": 30,
     "detected_target": 0,
-    "detected_any": 2,
+    "detected_any": 0,
     "failed": 0,
     "median_delay": null,
     "checks": "{}",
     "rate_target": 0.0,
-    "rate_any": 0.0666666667
+    "rate_any": 0.0
   },
   {
     "sub_type": "drift",
@@ -304,77 +356,90 @@
     "severity": 1.0,
     "n": 30,
     "detected_target": 0,
-    "detected_any": 2,
+    "detected_any": 0,
     "failed": 0,
     "median_delay": null,
     "checks": "{}",
     "rate_target": 0.0,
-    "rate_any": 0.0666666667
+    "rate_any": 0.0
+  },
+  {
+    "sub_type": "stuck",
+    "target": "oil_pressure",
+    "severity": 0.0,
+    "n": 30,
+    "detected_target": 0,
+    "detected_any": 0,
+    "failed": 0,
+    "median_delay": null,
+    "checks": "{}",
+    "rate_target": 0.0,
+    "rate_any": 0.0
   },
   {
     "sub_type": "stuck",
     "target": "oil_pressure",
     "severity": 0.1,
     "n": 30,
-    "detected_target": 30,
-    "detected_any": 30,
+    "detected_target": 0,
+    "detected_any": 0,
     "failed": 0,
-    "median_delay": 39.0,
-    "checks": "{\"flatlined\": 30}",
-    "rate_target": 1.0,
-    "rate_any": 1.0
+    "median_delay": null,
+    "checks": "{}",
+    "rate_target": 0.0,
+    "rate_any": 0.0
   },
   {
     "sub_type": "stuck",
     "target": "oil_pressure",
     "severity": 0.2,
     "n": 30,
-    "detected_target": 30,
-    "detected_any": 30,
+    "detected_target": 0,
+    "detected_any": 0,
     "failed": 0,
-    "median_delay": 39.0,
-    "checks": "{\"flatlined\": 30}",
-    "rate_target": 1.0,
-    "rate_any": 1.0
+    "median_delay": null,
+    "checks": "{}",
+    "rate_target": 0.0,
+    "rate_any": 0.0
   },
   {
     "sub_type": "stuck",
     "target": "oil_pressure",
     "severity": 0.35,
     "n": 30,
-    "detected_target": 30,
-    "detected_any": 30,
+    "detected_target": 0,
+    "detected_any": 0,
     "failed": 0,
-    "median_delay": 39.0,
-    "checks": "{\"flatlined\": 30}",
-    "rate_target": 1.0,
-    "rate_any": 1.0
+    "median_delay": null,
+    "checks": "{}",
+    "rate_target": 0.0,
+    "rate_any": 0.0
   },
   {
     "sub_type": "stuck",
     "target": "oil_pressure",
     "severity": 0.5,
     "n": 30,
-    "detected_target": 30,
-    "detected_any": 30,
+    "detected_target": 0,
+    "detected_any": 0,
     "failed": 0,
-    "median_delay": 39.0,
-    "checks": "{\"flatlined\": 30}",
-    "rate_target": 1.0,
-    "rate_any": 1.0
+    "median_delay": null,
+    "checks": "{}",
+    "rate_target": 0.0,
+    "rate_any": 0.0
   },
   {
     "sub_type": "stuck",
     "target": "oil_pressure",
     "severity": 0.75,
     "n": 30,
-    "detected_target": 30,
-    "detected_any": 30,
+    "detected_target": 0,
+    "detected_any": 0,
     "failed": 0,
-    "median_delay": 39.0,
-    "checks": "{\"flatlined\": 30}",
-    "rate_target": 1.0,
-    "rate_any": 1.0
+    "median_delay": null,
+    "checks": "{}",
+    "rate_target": 0.0,
+    "rate_any": 0.0
   },
   {
     "sub_type": "stuck",
@@ -392,67 +457,80 @@
   {
     "sub_type": "stuck",
     "target": "vibration",
+    "severity": 0.0,
+    "n": 30,
+    "detected_target": 0,
+    "detected_any": 0,
+    "failed": 0,
+    "median_delay": null,
+    "checks": "{}",
+    "rate_target": 0.0,
+    "rate_any": 0.0
+  },
+  {
+    "sub_type": "stuck",
+    "target": "vibration",
     "severity": 0.1,
     "n": 30,
-    "detected_target": 30,
-    "detected_any": 30,
+    "detected_target": 0,
+    "detected_any": 0,
     "failed": 0,
-    "median_delay": 39.0,
-    "checks": "{\"flatlined\": 30}",
-    "rate_target": 1.0,
-    "rate_any": 1.0
+    "median_delay": null,
+    "checks": "{}",
+    "rate_target": 0.0,
+    "rate_any": 0.0
   },
   {
     "sub_type": "stuck",
     "target": "vibration",
     "severity": 0.2,
     "n": 30,
-    "detected_target": 30,
-    "detected_any": 30,
+    "detected_target": 0,
+    "detected_any": 0,
     "failed": 0,
-    "median_delay": 39.0,
-    "checks": "{\"flatlined\": 30}",
-    "rate_target": 1.0,
-    "rate_any": 1.0
+    "median_delay": null,
+    "checks": "{}",
+    "rate_target": 0.0,
+    "rate_any": 0.0
   },
   {
     "sub_type": "stuck",
     "target": "vibration",
     "severity": 0.35,
     "n": 30,
-    "detected_target": 30,
-    "detected_any": 30,
+    "detected_target": 0,
+    "detected_any": 0,
     "failed": 0,
-    "median_delay": 39.0,
-    "checks": "{\"flatlined\": 30}",
-    "rate_target": 1.0,
-    "rate_any": 1.0
+    "median_delay": null,
+    "checks": "{}",
+    "rate_target": 0.0,
+    "rate_any": 0.0
   },
   {
     "sub_type": "stuck",
     "target": "vibration",
     "severity": 0.5,
     "n": 30,
-    "detected_target": 30,
-    "detected_any": 30,
+    "detected_target": 0,
+    "detected_any": 0,
     "failed": 0,
-    "median_delay": 39.0,
-    "checks": "{\"flatlined\": 30}",
-    "rate_target": 1.0,
-    "rate_any": 1.0
+    "median_delay": null,
+    "checks": "{}",
+    "rate_target": 0.0,
+    "rate_any": 0.0
   },
   {
     "sub_type": "stuck",
     "target": "vibration",
     "severity": 0.75,
     "n": 30,
-    "detected_target": 30,
-    "detected_any": 30,
+    "detected_target": 0,
+    "detected_any": 0,
     "failed": 0,
-    "median_delay": 39.0,
-    "checks": "{\"flatlined\": 30}",
-    "rate_target": 1.0,
-    "rate_any": 1.0
+    "median_delay": null,
+    "checks": "{}",
+    "rate_target": 0.0,
+    "rate_any": 0.0
   },
   {
     "sub_type": "stuck",

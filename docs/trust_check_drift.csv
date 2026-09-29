@@ -1,37 +1,43 @@
 sub_type,target,severity,n,detected_target,detected_any,failed,median_delay,checks,rate_target,rate_any
-bias,oil_pressure,0.1,30,0,3,0,,{},0.0,0.1
-bias,oil_pressure,0.2,30,0,3,0,,{},0.0,0.1
-bias,oil_pressure,0.35,30,0,3,0,,{},0.0,0.1
-bias,oil_pressure,0.5,30,0,3,0,,{},0.0,0.1
-bias,oil_pressure,0.75,30,0,3,0,,{},0.0,0.1
-bias,oil_pressure,1.0,30,7,9,0,14.0,"{""impossible_rate_of_change"": 7}",0.23333333333333334,0.3
-bias,vibration,0.1,30,0,2,0,,{},0.0,0.06666666666666667
-bias,vibration,0.2,30,0,2,0,,{},0.0,0.06666666666666667
-bias,vibration,0.35,30,0,2,0,,{},0.0,0.06666666666666667
-bias,vibration,0.5,30,0,2,0,,{},0.0,0.06666666666666667
-bias,vibration,0.75,30,0,2,0,,{},0.0,0.06666666666666667
-bias,vibration,1.0,30,0,3,0,,{},0.0,0.1
-drift,oil_pressure,0.1,30,0,2,0,,{},0.0,0.06666666666666667
-drift,oil_pressure,0.2,30,0,2,0,,{},0.0,0.06666666666666667
-drift,oil_pressure,0.35,30,0,2,0,,{},0.0,0.06666666666666667
-drift,oil_pressure,0.5,30,0,2,0,,{},0.0,0.06666666666666667
-drift,oil_pressure,0.75,30,0,2,0,,{},0.0,0.06666666666666667
-drift,oil_pressure,1.0,30,0,2,0,,{},0.0,0.06666666666666667
-drift,vibration,0.1,30,0,2,0,,{},0.0,0.06666666666666667
-drift,vibration,0.2,30,0,2,0,,{},0.0,0.06666666666666667
-drift,vibration,0.35,30,0,2,0,,{},0.0,0.06666666666666667
-drift,vibration,0.5,30,0,2,0,,{},0.0,0.06666666666666667
-drift,vibration,0.75,30,0,2,0,,{},0.0,0.06666666666666667
-drift,vibration,1.0,30,0,2,0,,{},0.0,0.06666666666666667
-stuck,oil_pressure,0.1,30,30,30,0,39.0,"{""flatlined"": 30}",1.0,1.0
-stuck,oil_pressure,0.2,30,30,30,0,39.0,"{""flatlined"": 30}",1.0,1.0
-stuck,oil_pressure,0.35,30,30,30,0,39.0,"{""flatlined"": 30}",1.0,1.0
-stuck,oil_pressure,0.5,30,30,30,0,39.0,"{""flatlined"": 30}",1.0,1.0
-stuck,oil_pressure,0.75,30,30,30,0,39.0,"{""flatlined"": 30}",1.0,1.0
+bias,oil_pressure,0.0,30,0,0,0,,{},0.0,0.0
+bias,oil_pressure,0.1,30,0,0,0,,{},0.0,0.0
+bias,oil_pressure,0.2,30,0,0,0,,{},0.0,0.0
+bias,oil_pressure,0.35,30,0,0,0,,{},0.0,0.0
+bias,oil_pressure,0.5,30,0,0,0,,{},0.0,0.0
+bias,oil_pressure,0.75,30,0,0,0,,{},0.0,0.0
+bias,oil_pressure,1.0,30,7,7,0,14.0,"{""impossible_rate_of_change"": 7}",0.23333333333333334,0.23333333333333334
+bias,vibration,0.0,30,0,0,0,,{},0.0,0.0
+bias,vibration,0.1,30,0,0,0,,{},0.0,0.0
+bias,vibration,0.2,30,0,0,0,,{},0.0,0.0
+bias,vibration,0.35,30,0,0,0,,{},0.0,0.0
+bias,vibration,0.5,30,0,0,0,,{},0.0,0.0
+bias,vibration,0.75,30,0,0,0,,{},0.0,0.0
+bias,vibration,1.0,30,0,0,0,,{},0.0,0.0
+drift,oil_pressure,0.0,30,0,0,0,,{},0.0,0.0
+drift,oil_pressure,0.1,30,0,0,0,,{},0.0,0.0
+drift,oil_pressure,0.2,30,0,0,0,,{},0.0,0.0
+drift,oil_pressure,0.35,30,0,0,0,,{},0.0,0.0
+drift,oil_pressure,0.5,30,0,0,0,,{},0.0,0.0
+drift,oil_pressure,0.75,30,0,0,0,,{},0.0,0.0
+drift,oil_pressure,1.0,30,0,0,0,,{},0.0,0.0
+drift,vibration,0.0,30,0,0,0,,{},0.0,0.0
+drift,vibration,0.1,30,0,0,0,,{},0.0,0.0
+drift,vibration,0.2,30,0,0,0,,{},0.0,0.0
+drift,vibration,0.35,30,0,0,0,,{},0.0,0.0
+drift,vibration,0.5,30,0,0,0,,{},0.0,0.0
+drift,vibration,0.75,30,0,0,0,,{},0.0,0.0
+drift,vibration,1.0,30,0,0,0,,{},0.0,0.0
+stuck,oil_pressure,0.0,30,0,0,0,,{},0.0,0.0
+stuck,oil_pressure,0.1,30,0,0,0,,{},0.0,0.0
+stuck,oil_pressure,0.2,30,0,0,0,,{},0.0,0.0
+stuck,oil_pressure,0.35,30,0,0,0,,{},0.0,0.0
+stuck,oil_pressure,0.5,30,0,0,0,,{},0.0,0.0
+stuck,oil_pressure,0.75,30,0,0,0,,{},0.0,0.0
 stuck,oil_pressure,1.0,30,30,30,0,39.0,"{""flatlined"": 30}",1.0,1.0
-stuck,vibration,0.1,30,30,30,0,39.0,"{""flatlined"": 30}",1.0,1.0
-stuck,vibration,0.2,30,30,30,0,39.0,"{""flatlined"": 30}",1.0,1.0
-stuck,vibration,0.35,30,30,30,0,39.0,"{""flatlined"": 30}",1.0,1.0
-stuck,vibration,0.5,30,30,30,0,39.0,"{""flatlined"": 30}",1.0,1.0
-stuck,vibration,0.75,30,30,30,0,39.0,"{""flatlined"": 30}",1.0,1.0
+stuck,vibration,0.0,30,0,0,0,,{},0.0,0.0
+stuck,vibration,0.1,30,0,0,0,,{},0.0,0.0
+stuck,vibration,0.2,30,0,0,0,,{},0.0,0.0
+stuck,vibration,0.35,30,0,0,0,,{},0.0,0.0
+stuck,vibration,0.5,30,0,0,0,,{},0.0,0.0
+stuck,vibration,0.75,30,0,0,0,,{},0.0,0.0
 stuck,vibration,1.0,30,30,30,0,39.0,"{""flatlined"": 30}",1.0,1.0
