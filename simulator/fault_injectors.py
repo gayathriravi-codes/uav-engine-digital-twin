@@ -8,6 +8,21 @@ perturbs sensors after onset to simulate the fault developing, and returns
 a faulted DataFrame with ground-truth RUL columns attached (since the fault
 onset/failure point is known by construction).
 
+SEVERITY SCALING (revision): severity now scales EVERY component of a fault,
+so severity=0 returns the healthy signal unchanged (apart from labels/RUL
+columns). Previously these parts ignored severity, which made low-severity
+detection look better than it is (noise cue, not a real offset):
+  - misfire: base misfire probability, RPM/EGT/vibration event sizes
+  - overheat / overheat_recovery / cooling_degradation / oil_issue:
+    per-row added noise
+  - vibration_fault: burstiness (spike_std)
+  - sensor_drift "stuck": now a partial freeze -- the sensor tracks the true
+    signal with weight (1 - min(severity, 1)); severity >= 1 is a full freeze
+At severity=1.0 every injector produces output identical to the previous
+version for the same seed (same random draws, multiplied by 1.0), so existing
+flights, the RUL model and the classifier stay valid. Results at other
+severities change by design -- rerun pod_sweep.py.
+
 Run directly to sanity-check + plot: python simulator/fault_injectors.py
 """
 import numpy as np
@@ -55,6 +70,9 @@ def inject_misfire(df, onset_frac=None, severity=1.0, seed=None):
     Misfire: irregular RPM drops (individual cylinder firing failures) with
     corresponding EGT spikes on the affected cycles (unburnt fuel igniting
     late in the exhaust). Gets more frequent/severe as it approaches failure.
+
+    Severity scales both how often misfires happen (including the 0.05 base
+    rate) and how large each event is (RPM drop, EGT spike, vibration).
     """
     rng = np.random.default_rng(seed)
     df = df.copy()
@@ -66,11 +84,11 @@ def inject_misfire(df, onset_frac=None, severity=1.0, seed=None):
     for i in range(onset_idx, n):
         linear_progress = (i - onset_idx) / max(1, (failure_idx - onset_idx))  # 0 -> 1
         progress = _degradation_curve(linear_progress)  # convex, calibrated to C-MAPSS shape
-        misfire_prob = 0.05 + 0.5 * progress * severity
+        misfire_prob = min(1.0, severity * (0.05 + 0.5 * progress))
         if rng.random() < misfire_prob:
-            df.loc[i, "rpm"] -= rng.uniform(80, 250) * (0.5 + progress)
-            df.loc[i, "egt"] += rng.uniform(15, 60) * (0.5 + progress)
-            df.loc[i, "vibration"] += rng.uniform(0.3, 1.0) * (0.5 + progress)
+            df.loc[i, "rpm"] -= rng.uniform(80, 250) * (0.5 + progress) * severity
+            df.loc[i, "egt"] += rng.uniform(15, 60) * (0.5 + progress) * severity
+            df.loc[i, "vibration"] += rng.uniform(0.3, 1.0) * (0.5 + progress) * severity
             df.loc[i, "fault_type"] = "misfire"
 
     df = _add_rul_column(df, onset_idx, failure_idx)
@@ -82,6 +100,8 @@ def inject_overheat(df, onset_frac=None, severity=1.0, seed=None):
     Overheating / combustion instability: EGT and CHT both trend upward
     together after onset (distinguish from cooling_degradation, where CHT
     rises but EGT stays flatter -- see Miljkovic's EGT-CHT pattern).
+
+    Severity scales the end rise and the per-row added noise.
     """
     rng = np.random.default_rng(seed)
     df = df.copy()
@@ -96,8 +116,8 @@ def inject_overheat(df, onset_frac=None, severity=1.0, seed=None):
     for i in range(onset_idx, n):
         linear_progress = (i - onset_idx) / max(1, ramp_len)
         progress = _degradation_curve(linear_progress)  # convex, calibrated to C-MAPSS shape
-        df.loc[i, "egt"] += egt_end_rise * progress + rng.normal(0, 2)
-        df.loc[i, "cht"] += cht_end_rise * progress + rng.normal(0, 1.5)
+        df.loc[i, "egt"] += egt_end_rise * progress + rng.normal(0, 2 * severity)
+        df.loc[i, "cht"] += cht_end_rise * progress + rng.normal(0, 1.5 * severity)
         df.loc[i, "fault_type"] = "overheat"
 
     df = _add_rul_column(df, onset_idx, failure_idx)
@@ -155,8 +175,8 @@ def inject_overheat_recovery(df, onset_frac=None, severity=1.0, seed=None,
             linear_progress = (i - trigger_idx) / max(1, post_trigger_len)
             progress = _degradation_curve(linear_progress) * (reduced_severity / max(severity, 1e-6))
 
-        df.loc[i, "egt"] += egt_end_rise * progress + rng.normal(0, 2)
-        df.loc[i, "cht"] += cht_end_rise * progress + rng.normal(0, 1.5)
+        df.loc[i, "egt"] += egt_end_rise * progress + rng.normal(0, 2 * severity)
+        df.loc[i, "cht"] += cht_end_rise * progress + rng.normal(0, 1.5 * severity)
         df.loc[i, "fault_type"] = "overheat"
 
     df = _add_rul_column(df, onset_idx, failure_idx)
@@ -168,6 +188,8 @@ def inject_cooling_degradation(df, onset_frac=None, severity=1.0, seed=None):
     Cooling degradation: CHT rises steadily while EGT stays relatively flat
     (heat isn't being carried away properly, but combustion itself is fine) --
     the opposite signature from overheat/combustion-instability.
+
+    Severity scales the end rise and the per-row added noise.
     """
     rng = np.random.default_rng(seed)
     df = df.copy()
@@ -181,9 +203,9 @@ def inject_cooling_degradation(df, onset_frac=None, severity=1.0, seed=None):
     for i in range(onset_idx, n):
         linear_progress = (i - onset_idx) / max(1, ramp_len)
         progress = _degradation_curve(linear_progress)  # convex, calibrated to C-MAPSS shape
-        df.loc[i, "cht"] += cht_end_rise * progress + rng.normal(0, 1.5)
+        df.loc[i, "cht"] += cht_end_rise * progress + rng.normal(0, 1.5 * severity)
         # EGT gets only a small secondary rise -- this is what separates it from overheat
-        df.loc[i, "egt"] += (cht_end_rise * 0.15) * progress + rng.normal(0, 2)
+        df.loc[i, "egt"] += (cht_end_rise * 0.15) * progress + rng.normal(0, 2 * severity)
         df.loc[i, "fault_type"] = "cooling_degradation"
 
     df = _add_rul_column(df, onset_idx, failure_idx)
@@ -192,10 +214,14 @@ def inject_cooling_degradation(df, onset_frac=None, severity=1.0, seed=None):
 
 def inject_oil_issue(df, onset_frac=None, severity=1.0, seed=None):
     """
-    Oil issue: gradual oil pressure drop combined with a slower oil temp rise,
+    Oil issue: gradual oil pressure drop combined with an oil temp rise,
     representing a developing lubrication problem (seal wear, oil breakdown,
     or a slow leak). Other sensors stay normal -- this is a lubrication-side
     fault, not a combustion-side one.
+
+    NOTE: pressure and temperature both follow the SAME degradation curve;
+    temperature does not lag or rise more slowly than pressure falls.
+    Severity scales both end shifts and the per-row added noise.
     """
     rng = np.random.default_rng(seed)
     df = df.copy()
@@ -210,8 +236,8 @@ def inject_oil_issue(df, onset_frac=None, severity=1.0, seed=None):
     for i in range(onset_idx, n):
         linear_progress = (i - onset_idx) / max(1, ramp_len)
         progress = _degradation_curve(linear_progress)
-        df.loc[i, "oil_pressure"] -= pressure_end_drop * progress + rng.normal(0, 0.5)
-        df.loc[i, "oil_temp"] += temp_end_rise * progress + rng.normal(0, 1.0)
+        df.loc[i, "oil_pressure"] -= pressure_end_drop * progress + rng.normal(0, 0.5 * severity)
+        df.loc[i, "oil_temp"] += temp_end_rise * progress + rng.normal(0, 1.0 * severity)
         df.loc[i, "fault_type"] = "oil_issue"
 
     df = _add_rul_column(df, onset_idx, failure_idx)
@@ -228,7 +254,11 @@ def inject_sensor_drift(df, onset_frac=None, severity=1.0, seed=None, sub_type=N
       - "bias"  -- a sudden constant offset appears at onset and stays fixed
       - "drift" -- an offset that grows steadily/linearly over time
       - "stuck" -- the sensor freezes at a constant value regardless of what
-                   the engine is actually doing (zero variance after onset)
+                   the engine is actually doing (zero variance after onset).
+                   Severity < 1 gives a PARTIAL freeze: the reading tracks
+                   the true signal with weight (1 - severity), i.e. a
+                   sluggish sensor. Severity >= 1 is a full freeze, and
+                   severity 0 leaves the sensor untouched.
     """
     rng = np.random.default_rng(seed)
     df = df.copy()
@@ -243,6 +273,7 @@ def inject_sensor_drift(df, onset_frac=None, severity=1.0, seed=None, sub_type=N
     ramp_len = failure_idx - onset_idx
     frozen_value = df.loc[onset_idx, target_sensor] if onset_idx < n else df[target_sensor].iloc[0]
     bias_amount = rng.uniform(0.15, 0.35) * df[target_sensor].mean() * severity
+    freeze_strength = min(max(severity, 0.0), 1.0)
 
     for i in range(onset_idx, n):
         linear_progress = (i - onset_idx) / max(1, ramp_len)
@@ -251,7 +282,8 @@ def inject_sensor_drift(df, onset_frac=None, severity=1.0, seed=None, sub_type=N
         elif sub_type == "drift":
             df.loc[i, target_sensor] += bias_amount * linear_progress
         elif sub_type == "stuck":
-            df.loc[i, target_sensor] = frozen_value
+            true_value = df.loc[i, target_sensor]
+            df.loc[i, target_sensor] = frozen_value + (1.0 - freeze_strength) * (true_value - frozen_value)
         df.loc[i, "fault_type"] = "sensor_drift"
 
     df["drift_sub_type"] = sub_type
@@ -266,6 +298,8 @@ def inject_vibration_fault(df, onset_frac=None, severity=1.0, seed=None):
     level (progressive imbalance) with rising variance/spikiness (mounting
     looseness) -- plausible under multiple underlying mechanical causes
     rather than one narrow pattern.
+
+    Severity scales both the mean rise and the burstiness (spike_std).
     """
     rng = np.random.default_rng(seed)
     df = df.copy()
@@ -279,7 +313,7 @@ def inject_vibration_fault(df, onset_frac=None, severity=1.0, seed=None):
     for i in range(onset_idx, n):
         linear_progress = (i - onset_idx) / max(1, ramp_len)
         progress = _degradation_curve(linear_progress)
-        spike_std = 0.1 + 0.4 * progress
+        spike_std = (0.1 + 0.4 * progress) * severity
         df.loc[i, "vibration"] += vib_end_rise * progress + rng.normal(0, spike_std)
         df.loc[i, "fault_type"] = "vibration_fault"
 

@@ -48,7 +48,7 @@ CLASS_NAMES = ["cooling_degradation", "misfire", "none", "oil_issue",
                "overheat", "sensor_drift", "vibration_fault"]
 NONE_IDX = CLASS_NAMES.index("none")
 
-SEVERITIES = (0.1, 0.2, 0.35, 0.5, 0.75, 1.0)
+SEVERITIES = (0.0, 0.1, 0.2, 0.35, 0.5, 0.75, 1.0)
 NOISE_LEVELS = (0.0, 0.02, 0.05)      # fraction of each sensor's healthy span
 ONSET_FRAC = 0.4
 DURATION = 300

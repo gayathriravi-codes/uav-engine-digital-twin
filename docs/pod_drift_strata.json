@@ -2,6 +2,18 @@
   {
     "sub_type": "bias",
     "target": "oil_pressure",
+    "severity": 0.0,
+    "n": 30,
+    "detected": 1,
+    "correct": 0,
+    "failed": 0,
+    "median_delay": 64.0,
+    "rate": 0.0333333333,
+    "rate_correct": 0.0
+  },
+  {
+    "sub_type": "bias",
+    "target": "oil_pressure",
     "severity": 0.1,
     "n": 30,
     "detected": 11,
@@ -70,6 +82,18 @@
     "median_delay": 14.0,
     "rate": 1.0,
     "rate_correct": 1.0
+  },
+  {
+    "sub_type": "bias",
+    "target": "vibration",
+    "severity": 0.0,
+    "n": 30,
+    "detected": 1,
+    "correct": 0,
+    "failed": 0,
+    "median_delay": 64.0,
+    "rate": 0.0333333333,
+    "rate_correct": 0.0
   },
   {
     "sub_type": "bias",
@@ -146,6 +170,18 @@
   {
     "sub_type": "drift",
     "target": "oil_pressure",
+    "severity": 0.0,
+    "n": 30,
+    "detected": 1,
+    "correct": 0,
+    "failed": 0,
+    "median_delay": 64.0,
+    "rate": 0.0333333333,
+    "rate_correct": 0.0
+  },
+  {
+    "sub_type": "drift",
+    "target": "oil_pressure",
     "severity": 0.1,
     "n": 30,
     "detected": 1,
@@ -214,6 +250,18 @@
     "median_delay": 34.0,
     "rate": 1.0,
     "rate_correct": 1.0
+  },
+  {
+    "sub_type": "drift",
+    "target": "vibration",
+    "severity": 0.0,
+    "n": 30,
+    "detected": 1,
+    "correct": 0,
+    "failed": 0,
+    "median_delay": 64.0,
+    "rate": 0.0333333333,
+    "rate_correct": 0.0
   },
   {
     "sub_type": "drift",
@@ -290,6 +338,18 @@
   {
     "sub_type": "stuck",
     "target": "oil_pressure",
+    "severity": 0.0,
+    "n": 30,
+    "detected": 1,
+    "correct": 0,
+    "failed": 0,
+    "median_delay": 64.0,
+    "rate": 0.0333333333,
+    "rate_correct": 0.0
+  },
+  {
+    "sub_type": "stuck",
+    "target": "oil_pressure",
     "severity": 0.1,
     "n": 30,
     "detected": 1,
@@ -362,62 +422,74 @@
   {
     "sub_type": "stuck",
     "target": "vibration",
+    "severity": 0.0,
+    "n": 30,
+    "detected": 1,
+    "correct": 0,
+    "failed": 0,
+    "median_delay": 64.0,
+    "rate": 0.0333333333,
+    "rate_correct": 0.0
+  },
+  {
+    "sub_type": "stuck",
+    "target": "vibration",
     "severity": 0.1,
     "n": 30,
-    "detected": 30,
-    "correct": 29,
+    "detected": 0,
+    "correct": 0,
     "failed": 0,
-    "median_delay": 34.0,
-    "rate": 1.0,
-    "rate_correct": 0.9666666667
+    "median_delay": null,
+    "rate": 0.0,
+    "rate_correct": 0.0
   },
   {
     "sub_type": "stuck",
     "target": "vibration",
     "severity": 0.2,
     "n": 30,
-    "detected": 30,
-    "correct": 29,
+    "detected": 1,
+    "correct": 1,
     "failed": 0,
-    "median_delay": 34.0,
-    "rate": 1.0,
-    "rate_correct": 0.9666666667
+    "median_delay": 129.0,
+    "rate": 0.0333333333,
+    "rate_correct": 0.0333333333
   },
   {
     "sub_type": "stuck",
     "target": "vibration",
     "severity": 0.35,
     "n": 30,
-    "detected": 30,
-    "correct": 29,
+    "detected": 18,
+    "correct": 18,
     "failed": 0,
-    "median_delay": 34.0,
-    "rate": 1.0,
-    "rate_correct": 0.9666666667
+    "median_delay": 74.0,
+    "rate": 0.6,
+    "rate_correct": 0.6
   },
   {
     "sub_type": "stuck",
     "target": "vibration",
     "severity": 0.5,
     "n": 30,
-    "detected": 30,
-    "correct": 29,
+    "detected": 25,
+    "correct": 25,
     "failed": 0,
-    "median_delay": 34.0,
-    "rate": 1.0,
-    "rate_correct": 0.9666666667
+    "median_delay": 39.0,
+    "rate": 0.8333333333,
+    "rate_correct": 0.8333333333
   },
   {
     "sub_type": "stuck",
     "target": "vibration",
     "severity": 0.75,
     "n": 30,
-    "detected": 30,
-    "correct": 29,
+    "detected": 28,
+    "correct": 27,
     "failed": 0,
-    "median_delay": 34.0,
-    "rate": 1.0,
-    "rate_correct": 0.9666666667
+    "median_delay": 39.0,
+    "rate": 0.9333333333,
+    "rate_correct": 0.9
   },
   {
     "sub_type": "stuck",
