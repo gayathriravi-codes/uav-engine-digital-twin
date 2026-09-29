@@ -43,7 +43,8 @@ from schema import (
 # `baseline_window` readings before that, flagging a shift larger than
 # `threshold_std_multiples` times the baseline window's own std.
 MEAN_SHIFT_CONFIG = {
-    "rpm": {"recent_window": 10, "baseline_window": 20, "threshold_std_multiples": 3.0},
+    "rpm": {"recent_window": 10, "baseline_window": 20, "threshold_std_multiples": 3.0,
+            "min_shift_frac": 0.015},
     "egt": {"recent_window": 10, "baseline_window": 20, "threshold_std_multiples": 3.0},
     "cht": {"recent_window": 10, "baseline_window": 20, "threshold_std_multiples": 3.0},
     "oil_pressure": {"recent_window": 10, "baseline_window": 20, "threshold_std_multiples": 3.0},
@@ -102,8 +103,12 @@ def check_sustained_mean_shift(values, sensor):
     if baseline_std < 1e-6:
         return bool(abs(recent_mean - baseline_mean) > 1e-6)
 
-    shift_in_stds = abs(recent_mean - baseline_mean) / baseline_std
-    return bool(shift_in_stds > cfg["threshold_std_multiples"])
+    shift = abs(recent_mean - baseline_mean)
+    # Ignore shifts smaller than a fraction of the level: a tight baseline window
+    # makes small real throttle movements look like many standard deviations.
+    if shift < cfg.get("min_shift_frac", 0.0) * abs(baseline_mean):
+        return False
+    return bool(shift / baseline_std > cfg["threshold_std_multiples"])
 
 
 def evaluate_sensor_trust(window):
