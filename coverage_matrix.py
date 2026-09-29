@@ -37,7 +37,9 @@ def nz(x):
 
 
 def levels(df, col):
-    """Rate at lowest / middle / highest severity present."""
+    """Rate at lowest / middle / highest severity above 0 (0 = no fault injected)."""
+    if df is not None:
+        df = df[df["severity"] > 0]
     if df is None or df.empty:
         return [np.nan] * 3, [np.nan] * 3
     g = df.groupby("severity")[col].mean().sort_index()
@@ -103,7 +105,7 @@ def build(noise):
 
     for (sub, tgt), d in strata.groupby(["sub_type", "target"]):
         tr = trust[(trust["sub_type"] == sub) & (trust["target"] == tgt)]
-        rows.append(make_row(f"sensor_drift: {sub} / {tgt}", d,
+        rows.append(make_row(f"sensor_drift: {sub} / {tgt}" + (" [0% noise data]" if noise > 0 else ""), d,
                              tr if not tr.empty else None, PHYSICS["sensor_drift"]))
     return pd.DataFrame(rows)
 
@@ -162,6 +164,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--noise", type=float, default=0.0)
     a = ap.parse_args()
+    TAG = f"_n{int(round(a.noise * 100))}"
 
     df = build(a.noise)
     fa = false_alarms()
@@ -173,10 +176,10 @@ def main():
     print("\nHealthy-flight false alarms:")
     print(fa.to_string(index=False))
 
-    df.to_csv(os.path.join(DOCS, "coverage_matrix.csv"), index=False)
+    df.to_csv(os.path.join(DOCS, f"coverage_matrix{TAG}.csv"), index=False)
     fa.to_csv(os.path.join(DOCS, "coverage_false_alarms.csv"), index=False)
-    print("\nsaved docs/coverage_matrix.csv, docs/coverage_false_alarms.csv")
-    save_png(df, os.path.join(DOCS, "coverage_matrix.png"))
+    print(f"\nsaved docs/coverage_matrix{TAG}.csv, docs/coverage_false_alarms.csv")
+    save_png(df, os.path.join(DOCS, f"coverage_matrix{TAG}.png"))
 
 
 if __name__ == "__main__":

@@ -1,0 +1,12 @@
+item,severity_low_mid_high,clf_low,clf_mid,clf_high,trust_low,trust_mid,trust_high,physics,best_low,best_high,verdict
+cooling_degradation,0.1/0.5/1,0.3666666666666666,1.0,1.0,,,,not measured,0.3666666666666666,1.0,covered at high severity only (classifier)
+misfire,0.1/0.5/1,0.0,0.4,1.0,,,,"detects (100% det, 1.73% FP)",0.0,1.0,covered at high severity only (classifier)
+oil_issue,0.1/0.5/1,0.2333333333333333,1.0,1.0,,,,not measured,0.2333333333333333,1.0,covered at high severity only (classifier)
+overheat,0.1/0.5/1,0.3,0.9666666666666668,1.0,,,,detects (10-40x residual spike),0.3,1.0,covered at high severity only (classifier)
+vibration_fault,0.1/0.5/1,0.2,0.9333333333333332,1.0,,,,not measured,0.2,1.0,covered at high severity only (classifier)
+sensor_drift: bias / oil_pressure [0% noise data],0.1/0.5/1,0.3666666666666666,1.0,1.0,0.0,0.0,0.2333333333333333,no signal (structural blind spot),0.3666666666666666,1.0,covered at high severity only (classifier)
+sensor_drift: bias / vibration [0% noise data],0.1/0.5/1,0.0333333333333333,0.6,1.0,0.0,0.0,0.0,no signal (structural blind spot),0.0333333333333333,1.0,covered at high severity only (classifier)
+sensor_drift: drift / oil_pressure [0% noise data],0.1/0.5/1,0.0333333333333333,0.9333333333333332,1.0,0.0,0.0,0.0,no signal (structural blind spot),0.0333333333333333,1.0,covered at high severity only (classifier)
+sensor_drift: drift / vibration [0% noise data],0.1/0.5/1,0.0333333333333333,0.3,0.8333333333333334,0.0,0.0,0.0,no signal (structural blind spot),0.0333333333333333,0.8333333333333334,"PARTIAL (classifier, best 0.83)"
+sensor_drift: stuck / oil_pressure [0% noise data],0.1/0.5/1,0.0333333333333333,0.0333333333333333,0.0333333333333333,1.0,1.0,1.0,no signal (structural blind spot),1.0,1.0,covered (sensor_trust)
+sensor_drift: stuck / vibration [0% noise data],0.1/0.5/1,1.0,1.0,1.0,1.0,1.0,1.0,no signal (structural blind spot),1.0,1.0,covered (classifier)
