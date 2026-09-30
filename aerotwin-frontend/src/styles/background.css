@@ -1,0 +1,119 @@
+/**
+ * src/styles/background.css
+ * Animated aurora / mesh background with 4 colour blobs,
+ * subtle noise overlay, and grid pattern.
+ */
+
+/* ── Aurora Container ── */
+.aurora-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: var(--bg-base);
+}
+
+/* ── Colour Blobs ── */
+.aurora-bg__blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(120px);
+  opacity: 0.35;
+  will-change: transform;
+}
+
+.aurora-bg__blob--teal {
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, var(--aurora-teal) 0%, transparent 70%);
+  top: -10%;
+  left: -5%;
+  animation: aurora-drift-1 18s ease-in-out infinite alternate;
+}
+
+.aurora-bg__blob--indigo {
+  width: 550px;
+  height: 550px;
+  background: radial-gradient(circle, var(--aurora-indigo) 0%, transparent 70%);
+  top: 30%;
+  right: -8%;
+  animation: aurora-drift-2 22s ease-in-out infinite alternate;
+}
+
+.aurora-bg__blob--amber {
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, var(--aurora-amber) 0%, transparent 70%);
+  bottom: -5%;
+  left: 35%;
+  opacity: 0.2;
+  animation: aurora-drift-3 20s ease-in-out infinite alternate;
+}
+
+.aurora-bg__blob--blue {
+  width: 700px;
+  height: 700px;
+  background: radial-gradient(circle, var(--aurora-blue) 0%, transparent 60%);
+  top: 50%;
+  left: 15%;
+  opacity: 0.5;
+  animation: aurora-drift-4 25s ease-in-out infinite alternate;
+}
+
+/* ── Drift Animations ── */
+@keyframes aurora-drift-1 {
+  0%   { transform: translate(0, 0) scale(1); }
+  33%  { transform: translate(80px, 40px) scale(1.08); }
+  66%  { transform: translate(-30px, 80px) scale(0.95); }
+  100% { transform: translate(50px, -20px) scale(1.05); }
+}
+
+@keyframes aurora-drift-2 {
+  0%   { transform: translate(0, 0) scale(1); }
+  33%  { transform: translate(-60px, 50px) scale(1.05); }
+  66%  { transform: translate(40px, -60px) scale(0.98); }
+  100% { transform: translate(-40px, 30px) scale(1.03); }
+}
+
+@keyframes aurora-drift-3 {
+  0%   { transform: translate(0, 0) scale(1); }
+  50%  { transform: translate(60px, -30px) scale(1.1); }
+  100% { transform: translate(-40px, 20px) scale(0.95); }
+}
+
+@keyframes aurora-drift-4 {
+  0%   { transform: translate(0, 0) scale(1); }
+  50%  { transform: translate(-50px, -40px) scale(1.06); }
+  100% { transform: translate(30px, 30px) scale(0.97); }
+}
+
+/* ── Noise Overlay ── */
+.aurora-bg__noise {
+  position: absolute;
+  inset: 0;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 200px 200px;
+  pointer-events: none;
+}
+
+/* ── Grid Overlay ── */
+.aurora-bg__grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.025;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.5) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.5) 1px, transparent 1px);
+  background-size: 60px 60px;
+  pointer-events: none;
+}
+
+/* ── Reduced Motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .aurora-bg__blob {
+    animation: none !important;
+  }
+}
